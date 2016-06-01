@@ -290,6 +290,7 @@ let topbar pages =
               <li><a href="features.html">Features</a></li>
               <li><a href="concepts.html">Concepts</a></li>
               <li><a href="architecture.html">Architecture</a></li>
+              <li><a href="storage_migration.html">Storage migration</a></li>
               <li><a href="faq.html">FAQ</a></li>
             </ul>
 	  </li>
@@ -417,4 +418,5 @@ let write apis =
       "faq.html";
       "learn.html";
       "architecture.html";
+      "storage_migration.html";
     ]
