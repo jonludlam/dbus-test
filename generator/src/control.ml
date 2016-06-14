@@ -1,528 +1,269 @@
-open Types
-open Type
+open Idl
 
-let api =
-  let health_decl =
-    Type.(Variant(
-      ("Healthy", Basic String, "Storage is fully available"), [
-       "Recovering", Basic String, "Storage is busy recovering, e.g. rebuilding mirrors.";
-      ]
-    )) in
-  let sr_stat_decl =
-    Type.(Struct(
-        ( "sr", Name "sr", String.concat " " [
-          "The URI identifying this volume. A typical value would be a";
-          "file:// URI pointing to a directory or block device.";
-          ]),
-        [ "name", Basic String, String.concat " " [
-          "Short, human-readable label for the SR.";
-          ];
-          "description", Basic String, String.concat " " [
-            "Longer, human-readable description of the SR. Descriptions are";
-            "generally only displayed by clients when the user is examining";
-            "SRs in detail.";
-          ];
-          "free_space", Basic Int64, String.concat " " [
-            "Number of bytes free on the backing storage (in bytes)";
-          ];
-          "total_space", Basic Int64, String.concat " " [
-            "Total physical size of the backing storage (in bytes)";
-          ];
-          "datasources", Array (Basic String), String.concat " " [
-            "URIs naming datasources: time-varying quantities representing anything";
-            "from disk access latency to free space. The entities named by these URIs";
-            "are self-describing.";
-          ];
-          "clustered", Basic Boolean, String.concat " " [
-            "Indicates whether the SR uses clustered local storage.";
-          ];
-          "health", Name "health", String.concat " " [
-            "The health status of the SR.";
-          ];
-        ]
-      )) in
-  let volume_decl =
-    Type.(Struct(
-        ( "key", Name "key", String.concat " " [
-          "A primary key for this volume. The key must be unique";
-          "within the enclosing Storage Repository (SR). A typical value would";
-          "be a filename or an LVM volume name."
-          ]),
-        [ "uuid", Option (Basic String), String.concat " " [
-          "A uuid (or guid) for the volume, if one is available.";
-          "If a storage system has a built-in notion of a guid, then it";
-          "will be returned here.";
-          ];
-          "name", Basic String, String.concat " " [
-          "Short, human-readable label for the volume. Names are commonly used by";
-          "when displaying short lists of volumes.";
-          ];
-          "description", Basic String, String.concat " " [
-            "Longer, human-readable description of the volume. Descriptions are";
-            "generally only displayed by clients when the user is examining";
-            "volumes individually.";
-          ];
-          "read_write", Basic Boolean, String.concat " " [
-            "True means the VDI may be written to, false means the volume is";
-            "read-only. Some storage media is read-only so all volumes are";
-            "read-only; for example .iso disk images on an NFS share. Some";
-            "volume are created read-only; for example because they are snapshots";
-            "of some other VDI.";
-          ];
-          "virtual_size", Basic Int64, String.concat " " [
-            "Size of the volume from the perspective of a VM (in bytes)";
-          ];
-          "physical_utilisation", Basic Int64, String.concat " " [
-            "Amount of space currently used on the backing storage (in bytes)";
-          ];
-          "uri", Array (Basic String), String.concat " " [
-            "A list of URIs which can be opened and used for I/O. A URI could ";
-            "reference a local block device, a remote NFS share, iSCSI LUN or ";
-            "RBD volume. In cases where the data may be accessed over several ";
-            "protocols, he list should be sorted into descending order of ";
-            "desirability. Xapi will open the most desirable URI for which it has ";
-            "an available datapath plugin.";
-          ];
-          "keys", Dict(String, Basic String), String.concat " " [
-            "A lit of key=value pairs which have been stored in the Volume ";
-            "metadata. These should not be interpreted by the Volume plugin.";
-          ];
-        ]
-      )) in
-  let volume = Type.Name "volume" in
-  let sr_stat = Type.Name "sr_stat" in
-  let sr = {
-    Arg.name = "sr";
-    ty = Type.(Basic String);
-    description = "The Storage Repository";
-  } in
-  let key = {
-    Arg.name = "key";
-    ty = Type.(Basic String);
-    description = "The volume key";
-  } in
-  let uri = {
-    Arg.name = "uri";
-    ty = Type.(Basic String);
-    description = "The Storage Repository URI";
-  } in
-  {
-    Interfaces.name = "volume";
-    title = "The Volume plugin interface";
-    description =
-      String.concat " " [
-        "The xapi toolstack delegates all storage control-plane functions to ";
-        "\"Volume plugins\".These plugins";
-        "allow the toolstack to create/destroy/snapshot/clone volumes which";
-        "are organised into groups called Storage Repositories (SR). Volumes";
-        "have a set of URIs which can be used by the \"Datapath plugins\"";
-        "to connect the disk data to VMs.";
-      ];
-    exn_decls = [
-      {
-        TyDecl.name = "Sr_not_attached";
-        description = "An SR must be attached in order to access volumes";
-        ty = Type.(Basic String)
-      }; {
-        TyDecl.name = "SR_does_not_exist";
-        description = "The specified SR could not be found";
-        ty = Type.(Basic String)
-      }; {
-        TyDecl.name = "Volume_does_not_exist";
-        description = "The specified volume could not be found in the SR";
-        ty = Type.(Basic String)
-      }; {
-        TyDecl.name = "Unimplemented";
-        description = "The operation has not been implemented";
-        ty = Type.(Basic String);
-      }; {
-        TyDecl.name = "Cancelled";
-        description = "The task has been asynchronously cancelled";
-        ty = Type.(Basic String);
-      };
-    ];
-    type_decls = [
-      {
-        TyDecl.name = "key";
-        description = String.concat " " [
-          "Primary key for a volume. This can be any string which";
-          "is meaningful to the implementation. For example this could be an";
-          "NFS filename, an LVM LV name or even a URI. This string is";
-          "abstract."
-          ];
-        ty = Type.(Basic String);
-      }; {
-        TyDecl.name = "sr";
-        description = String.concat " " [
-          "Primary key for a specific Storage Repository. This can be any ";
-          "string which is meaningful to the implementation. For example this ";
-          "could be an NFS directory name, an LVM VG name or even a URI.";
-          "This string is abstract.";
-        ];
-        ty = Type.(Basic String);
-      }; {
-        TyDecl.name = "health";
-        description = "The health status of an SR.";
-        ty = health_decl;
-      }; {
-        TyDecl.name = "sr_stat";
-        description = String.concat " " [
-          "A set of high-level properties associated with an SR. These";
-          "properties can change dynamically and can be queried by a";
-          "SR.stat call.";
-        ];
-        ty = sr_stat_decl
-      }; {
-        TyDecl.name = "volume";
-        description = String.concat " " [
-          "A set of properties associated with a volume. These properties can ";
-          "change dynamically and can be queried by the Volume.stat call.";
-        ];
-        ty = volume_decl
-      }
+type exns =
+  | Sr_not_attached of string
+  | SR_does_not_exist of string
+  | Volume_does_not_exist of string
+  | Unimplemented of string
+  | Cancelled of string
+    [@@deriving rpc]
 
-    ];
-    interfaces =
-      [
-        {
-          Interface.name = "Volume";
-          description = "Operations which operate on volumes (also known as Virtual Disk Images)";
-          type_decls = [];
-          methods = [
-            {
-              Method.name = "create";
-              description = String.concat " " [
-                "[create sr name description size] creates a new volume in [sr]";
-                "with [name] and [description]. The volume will have size";
-                ">= [size] i.e. it is always permissable for an implementation";
-                "to round-up the volume to the nearest convenient block size";
-              ];
-              inputs = [
-                sr;
-                {
-                  Arg.name = "name";
-                  ty = Basic String;
-                  description = String.concat " " [
-                    "A human-readable name to associate with the new disk. This";
-                    "name is intended to be short, to be a good summary of the";
-                    "disk."
-                  ]
-                };
-                {
-                  Arg.name = "description";
-                  ty = Basic String;
-                  description = String.concat " " [
-                    "A human-readable description to associate with the new";
-                    "disk. This can be arbitrarily long, up to the general";
-                    "string size limit."
-                  ]
-                };
-                {
-                  Arg.name = "size";
-                  ty = Basic Int64;
-                  description = String.concat " " [
-                    "A minimum size (in bytes) for the disk. Depending on the";
-                    "characteristics of the implementation this may be rounded";
-                    "up to (for example) the nearest convenient block size. The";
-                    "created disk will not be smaller than this size.";
-                  ]
-                };
-              ];
-              outputs = [
-                { Arg.name = "volume";
-                  ty = volume;
-                  description = "Properties of the created volume";
-                }
-              ];
-            }; {
-              Method.name = "snapshot";
-              description = String.concat " " [
-                "[snapshot sr volume] creates a new volue which is a ";
-                "snapshot of [volume] in [sr]. Snapshots should never be";
-                "written to; they are intended for backup/restore only.";
-                "Note the name and description are copied but any extra";
-                "metadata associated by [set] is not copied.";
-              ];
-              inputs = [
-                sr;
-                key;
-              ];
-              outputs = [
-                { Arg.name = "volume";
-                  ty = volume;
-                  description = "Properties of the created volume";
-                }
-              ];
-            }; {
-              Method.name = "clone";
-              description = String.concat " " [
-                "[clone sr volume] creates a new volume which is a writable";
-                "clone of [volume] in [sr]. Note the name and description are";
-                "copied but any extra metadata associated by [set] is not copied.";
-              ];
-              inputs = [
-                sr;
-                key;
-              ];
-              outputs = [
-                { Arg.name = "volume";
-                  ty = volume;
-                  description = "Properties of the created volume";
-                }
-              ];
-            }; {
-              Method.name = "destroy";
-              description = "[destroy sr volume] removes [volume] from [sr]";
-              inputs = [
-                sr;
-                key;
-              ];
-              outputs = [
-              ];
-            }; {
-              Method.name = "set_name";
-              description = String.concat " " [
-                "[set_name sr volume new_name] changes the name of [volume]";
-              ];
-              inputs = [
-                sr;
-                key;
-                { Arg.name = "new_name";
-                  ty = Basic String;
-                  description = "New name"
-                }
-            ];
-              outputs = [
-              ];
-            }; {
-              Method.name = "set_description";
-              description = String.concat " " [
-                "[set_description sr volume new_description] changes the description of [volume]";
-              ];
-              inputs = [
-                sr;
-                key;
-                { Arg.name = "new_description";
-                  ty = Basic String;
-                  description = "New description"
-                }
-            ];
-              outputs = [
-              ];
-            }; {
-              Method.name = "set";
-              description = String.concat " " [
-                "[set sr volume key value] associates [key] with [value] in the metadata of [volume]";
-                "Note these keys and values are not interpreted by the plugin; they are intended for";
-                "the higher-level software only.";
-              ];
-              inputs = [
-                sr;
-                key;
-                { Arg.name = "k";
-                  ty = Basic String;
-                  description = "Key"
-                }; {
-                  Arg.name = "v";
-                  ty = Basic String;
-                  description = "Value"
-                }
-            ];
-              outputs = [
-              ];
-            }; {
-              Method.name = "unset";
-              description = String.concat " " [
-                "[unset sr volume key] removes [key] and any value associated with it from the metadata of [volume]";
-                "Note these keys and values are not interpreted by the plugin; they are intended for";
-                "the higher-level software only.";
-              ];
-              inputs = [
-                sr;
-                key;
-                { Arg.name = "k";
-                  ty = Basic String;
-                  description = "Key"
-                }
-            ];
-              outputs = [
-              ];
-            }; {
-              Method.name = "resize";
-              description = String.concat " " [
-                "[resize sr volume new_size] enlarges [volume] to be at least";
-                "[new_size].";
-              ];
-              inputs = [
-                sr;
-                key;
-                { Arg.name = "new_size";
-                  ty = Basic Int64;
-                  description = "New disk size"
-                }
-            ];
-              outputs = [
-              ];
-            }; {
-              Method.name = "stat";
-              description = String.concat " " [
-                "[stat sr volume] returns metadata associated with [volume].";
-              ];
-              inputs = [
-                sr;
-                key;
-              ];
-              outputs = [
-                { Arg.name = "volume";
-                  ty = volume;
-                  description = "Volume metadata";
-                }
-              ];
-            };
-          ]
-        }; {
-          Interface.name = "SR";
-          description = "Operations which act on Storage Repositories";
-          type_decls = [];
-          methods = [
-            {
-              Method.name = "probe";
-              description = "[probe uri]: looks for existing SRs on the storage device";
-              inputs = [
-                uri;
-              ];
-              outputs = [
-               { Arg.name = "result";
-                 ty = 
-                   Type.Struct (
-                     ("srs", Type.(Array sr_stat), "SRs found on this storage device"), [
-                      "uris", Type.(Array (Basic String)), "Other possible URIs which may contain SRs"
-                   ]);
-                 description = "Contents of the storage device";
-               }
-              ];
-            };
-            {
-              Method.name = "create";
-              description = "[create uri name description configuration]: creates a fresh SR";
-              inputs = [
-                uri;
-                { Arg.name = "name";
-                  ty = Type.(Basic String);
-                  description = "Human-readable name for the SR";
-                }; {
-                  Arg.name = "description";
-                  ty = Type.(Basic String);
-                  description = "Human-readable description for the SR";
-                }; {
-                  Arg.name = "configuration";
-                  ty = Type.(Dict(String, Basic String));
-                  description = String.concat " " [
-                    "Plugin-specific configuration which describes where and";
-                    "how to create the storage repository. This may include";
-                    "the physical block device name, a remote NFS server and";
-                    "path or an RBD storage pool.";
-                  ];
-                };
-              ];
-              outputs = []
-            };
-            {
-              Method.name = "attach";
-              description = String.concat " "[
-                "[attach uri]: attaches the SR to the local host. Once an SR";
-                "is attached then volumes may be manipulated.";
-              ];
-              inputs = [
-                uri;
-              ];
-              outputs = [
-                sr;
-              ];
-            }; {
-              Method.name = "detach";
-              description = String.concat " " [
-                "[detach sr]: detaches the SR, clearing up any associated";
-                "resources. Once the SR is detached then volumes may not be";
-                "manipulated.";
-              ];
-              inputs = [
-                sr;
-              ];
-              outputs = [
-              ];
-            }; {
-              Method.name = "destroy";
-              description = String.concat " "[
-                "[destroy sr]: destroys the [sr] and deletes any volumes";
-                "associated with it. Note that an SR must be attached to be";
-                "destroyed; otherwise Sr_not_attached is thrown.";
-              ];
-              inputs = [
-                sr;
-              ];
-              outputs = [
-              ];
-            }; {
-              Method.name = "stat";
-              description = String.concat " " [
-                "[stat sr] returns summary metadata associated with [sr]. Note this call does not return details of sub-volumes, see SR.ls.";
-              ];
-              inputs = [
-                sr;
-              ];
-              outputs = [
-                { Arg.name = "sr";
-                  ty = sr_stat;
-                  description = "SR metadata";
-                }
-              ];
-            }; {
-              Method.name = "set_name";
-              description = String.concat " " [
-                "[set_name sr new_name] changes the name of [sr]";
-              ];
-              inputs = [
-                sr;
-                { Arg.name = "new_name";
-                  ty = Basic String;
-                  description = "The new name of the SR"
-                }
-            ];
-              outputs = [
-              ];
-            }; {
-              Method.name = "set_description";
-              description = String.concat " " [
-                "[set_description sr new_description] changes the description of [sr]";
-              ];
-              inputs = [
-                sr;
-                { Arg.name = "new_description";
-                  ty = Basic String;
-                  description = "The new description for the SR";
-                }
-              ];
-              outputs = [
-              ];
-            }; {
-              Method.name = "ls";
-              description = String.concat " " [
-                "[ls sr] returns a list of volumes";
-                "contained within an attached SR.";
-              ];
-              inputs = [
-                sr;
-              ];
-              outputs = [
-                {
-                  Arg.name = "volumes";
-                  ty = Type.(Array (Name "volume"));
-                  description = "List of all the visible volumes in the SR";
-                }
-              ];
-            }
-          ]
-        }
-      ]
-  }
+type health =
+  | Healthy of string [@doc "Storage is fully available"]
+  | Recovering of string [@doc "Storage is busy recovering, e.g. rebuilding mirrors"]
+  [@@deriving rpc]
+
+type sr = string [@@deriving rpc] [@@doc
+  "Primary key for a specific Storage Repository. This can be any string which is meaningful to the implementation. For example this could be an NFS directory name, an LVM VG name or even a URI. This string is abstract."]
+  
+type sr_stat = {
+  sr: sr
+      [@doc "The URI identifying this volume. A typical value would be a file:// URI pointing to a directory or block device" ];
+  
+  name: string
+      [@doc "Short, human-readable label for the SR." ];
+
+  description: string
+      [@doc "Longer, human-readable description of the SR. Descriptions are generally only displayed by clients when the user is examining SRs in detail."];
+
+  free_space: int64
+      [@doc "Number of bytes free on the backing storage (in bytes)"];
+
+  total_space: int64
+      [@doc "Total physical size of the backing storage (in bytes)"];
+
+  datasources: string list
+      [@doc "URIs naming datasources: time-varying quantities representing anything from disk access latency to free space. The entities named by these URIs are self-describing."];
+
+  clustered: bool
+      [@doc "Indicates whether the SR uses clustered local storage."];
+
+  health: health
+      [@doc "The health status of the SR."]
+} [@@deriving rpc]
+
+type key = string
+  [@@deriving rpc] [@@doc "Primary key for a volume. This can be any string which is meaningful to the implementation. For example this could be an NFS filename, an LVM LV name or even a URI. This string is abstract."]
+
+type volume = {
+  key : key
+      [@doc "A primary key for this volume. The key must be unique within the enclosing Storage Repository (SR). A typical value would be a filename or an LVM volume name."];
+  uuid : string option
+      [@doc "A uuid (or guid) for the volume, if one is available. If a storage system has a built-in notion of a guid, then it will be returned here."];
+  
+  name : string
+      [@doc "Short, human-readable label for the volume. Names are commonly used by when displaying short lists of volumes."];
+
+  description : string
+      [@doc "Longer, human-readable description of the volume. Descriptions are generally only displayed by clients when the user is examining volumes individually."];
+
+  read_write : bool
+      [@doc "True means the VDI may be written to, false means the volume is read-only. Some storage media is read-only so all volumes are read-only; for example .iso disk images on an NFS share. Some volume are created read-only; for example because they are snapshots of some other VDI."];
+
+  virtual_size : int64
+      [@doc "Size of the volume from the perspective of a VM (in bytes)"];
+
+  physical_utilisation : int64
+      [@doc "Amount of space currently used on the backing storage (in bytes)"];
+
+  uri : string list
+      [@doc "A list of URIs which can be opened and used for I/O. A URI could reference a local block device, a remote NFS share, iSCSI LUN or RBD volume. In cases where the data may be accessed over several protocols, he list should be sorted into descending order of desirability. Xapi will open the most desirable URI for which it has an available datapath plugin."];
+
+  keys : (string * string) list
+      [@doc "A lit of key=value pairs which have been stored in the Volume metadata. These should not be interpreted by the Volume plugin."];
+} [@@deriving rpc]
+
+
+let sr = Param.mk ~name:"sr" ~description:"The Storage Repository"
+    Types.string
+
+let unit = Param.mk Types.unit
+
+
+module Volume(R: RPC) = struct
+  open R
+
+  let key = Param.mk ~name:"key" ~description:"The volume key" key_def
+
+  let uri = Param.mk ~name:"uri" ~description:"The Storage Repository URI"
+      Types.string
+
+  let name = Param.mk ~name:"name" ~description:
+      "A human-readable name to associate with the new disk. This name is intended to be short, to be a good summary of the disk." Types.string
+
+  let description = Param.mk ~name:"description" ~description:
+      "A human-readable description to associate with the new disk. This can be arbitrarily long, up to the general string size limit." Types.string
+  
+  let size = Param.mk ~name:"size" ~description:
+      "A minimum size (in bytes) for the disk. Depending on the characteristics of the implementation this may be rounded up to (for example) the nearest convenient block size. The created disk will not be smaller than this size."
+      Types.int64
+
+  let volume = Param.mk ~name:"volume" ~description:
+      "Properties of the volume" volume_def
+
+
+  let interface = R.describe
+      {Idl.Interface.name = "Volume";
+       description="Operations which operate on volumes (also known as Virtual Disk Images)";
+       version=1}
+  
+  let create = R.declare "create"
+      "[create sr name description size] creates a new volume in [sr] with [name] and [description]. The volume will have size >= [size] i.e. it is always permissable for an implementation to round-up the volume to the nearest convenient block size"
+      (sr @-> name @-> description @-> size @-> returning volume)
+
+  let snapshot = R.declare "snapshot"
+      "[snapshot sr volume] creates a new volue which is a  snapshot of [volume] in [sr]. Snapshots should never be written to; they are intended for backup/restore only. Note the name and description are copied but any extra metadata associated by [set] is not copied."
+      (sr @-> key @-> returning volume)
+
+  let clone = R.declare "clone"
+      "[clone sr volume] creates a new volume which is a writable clone of [volume] in [sr]. Note the name and description are copied but any extra metadata associated by [set] is not copied."
+      (sr @-> key @-> returning volume)
+
+  let destroy = R.declare "destroy"
+      "[destroy sr volume] removes [volume] from [sr]"
+      (sr @-> key @-> returning unit)
+
+  let new_name = Param.mk ~name:"new_name" ~description:"New name" Types.string
+  let set_name = R.declare "set_name"
+      "[set_name sr volume new_name] changes the name of [volume]"
+      (sr @-> key @-> new_name @-> returning unit)
+
+  let new_description = Param.mk ~name:"new_description" ~description:"New description" Types.string
+  let set_description = R.declare "set_description"
+      "[set_description sr volume new_description] changes the description of [volume]"
+      (sr @-> key @-> new_description @-> returning unit)
+
+  let k = Param.mk ~name:"k" ~description:"Key" Types.string
+  let v = Param.mk ~name:"v" ~description:"Value" Types.string
+  let set = R.declare "set"
+      "[set sr volume key value] associates [key] with [value] in the metadata of [volume] Note these keys and values are not interpreted by the plugin; they are intended for the higher-level software only."
+      (sr @-> key @-> k @-> v @-> returning unit)
+
+  let unset = R.declare "unset"
+      "[unset sr volume key] removes [key] and any value associated with it from the metadata of [volume] Note these keys and values are not interpreted by the plugin; they are intended for the higher-level software only."
+      (sr @-> key @-> k @-> returning unit)
+
+  let new_size = Param.mk ~name:"new_size" ~description:"New disk size" Types.int64
+  let resize = R.declare "resize"
+      "[resize sr volume new_size] enlarges [volume] to be at least [new_size]."
+      (sr @-> key @-> new_size @-> returning unit)
+
+  let stat = R.declare "stat"
+      "[stat sr volume] returns metadata associated with [volume]."
+      (sr @-> key @-> returning volume)
+end
+
+type probe_result = {
+  srs : sr_stat list [@doc "SRs found on this storage device"];
+  uris : Data.uri list [@doc "Other possible URIs which may contain SRs"];
+} [@@deriving rpc]
+
+module Sr(R : RPC) = struct
+  open R
+
+  let interface = R.describe
+      {Idl.Interface.name = "SR";
+       description="Operations which act on Storage Repositories";
+       version=1}
+  
+  let uri = Param.mk ~name:"uri" ~description:"The Storage Repository URI"
+      Types.string
+
+  let probe_result_p = Param.mk ~name:"result" ~description:"Contents of the storage device" probe_result_def
+      
+  let probe = R.declare "probe"
+      "[probe uri]: looks for existing SRs on the storage device"
+    (uri @-> returning probe_result_p)
+
+
+  let name = Param.mk ~name:"name" ~description:
+      "Human-readable name for the SR" Types.string
+  let description = Param.mk ~name:"description" ~description:
+      "Human-readable description for the SR" Types.string
+  let configuration = Param.mk ~name:"configuration"
+      Types.({name="configuration"; description="Plugin-specific configuration which describes where and how to create the storage repository. This may include the physical block device name, a remote NFS server and path or an RBD storage pool.";
+       ty = Dict(String, Basic String)})       
+  let create = R.declare "create"
+      "[create uri name description configuration]: creates a fresh SR"
+      (uri @-> name @-> description @-> configuration @-> returning unit)
+
+  let attach = R.declare "attach"
+      "[attach uri]: attaches the SR to the local host. Once an SR is attached then volumes may be manipulated."
+      (uri @-> returning sr)
+
+  let detach = R.declare "detach"
+      "[detach sr]: detaches the SR, clearing up any associated resources. Once the SR is detached then volumes may not be manipulated."
+      (sr @-> returning unit)
+
+  let destroy = R.declare "destroy"
+      "[destroy sr]: destroys the [sr] and deletes any volumes associated with it. Note that an SR must be attached to be destroyed; otherwise Sr_not_attached is thrown."
+      (sr @-> returning unit)
+
+  let stat_result = Param.mk ~name:"sr" ~description:"SR metadata" sr_stat_def
+  let stat = R.declare "stat"
+      "[stat sr] returns summary metadata associated with [sr]. Note this call does not return details of sub-volumes, see SR.ls."
+      (sr @-> returning stat_result)
+
+  let new_name = Param.mk ~name:"new_name" ~description:"The new name of the SR"
+      Types.string
+  let set_name = R.declare "set_name"
+      "[set_name sr new_name] changes the name of [sr]"
+      (sr @-> new_name @-> returning unit)
+
+  let new_description = Param.mk ~name:"new_description" ~description:"The new description for the SR"
+      Types.string
+  let set_description = R.declare "set_description"
+      "[set_description sr new_description] changes the description of [sr]"
+      (sr @-> new_description @-> returning unit)
+
+  let volumes = Param.mk ~name:"volumes"
+      Types.({name="volumes"; description="A list of volumes"; ty=Array (tydesc_of_volume)})
+      
+  let ls = R.declare "ls"
+      "[ls sr] returns a list of volumes contained within an attached SR."
+      (sr @-> returning volumes)
+end
+
+module VolumeCode=Volume(Codegen)
+module SrCode=Sr(Codegen)
+
+let dbg = Param.mk ~name:"dbg" ~description:"Debug context from the caller" Types.string
+    
+let interfaces =
+  let interfaces = Codegen.Interfaces.empty
+      "volume"
+      "The Volume plugin interface"
+      "The xapi toolstack delegates all storage control-plane functions to \"Volume plugins\".These plugins allow the toolstack to create/destroy/snapshot/clone volumes which are organised into groups called Storage Repositories (SR). Volumes have a set of URIs which can be used by the \"Datapath plugins\" to connect the disk data to VMs."
+  in
+
+  let vinterface = VolumeCode.(
+      interface
+      |> create
+      |> snapshot
+      |> clone
+      |> destroy
+      |> set_name
+      |> set_description
+      |> set
+      |> unset
+      |> resize
+      |> stat
+    ) in
+  
+  let vinterface = Codegen.Interface.prepend_arg vinterface dbg in
+
+  let sinterface = SrCode.(
+      interface |> probe |> create |> attach |> detach |> destroy |> stat |> set_name |> set_description |> ls) in
+
+  let sinterface = Codegen.Interface.prepend_arg sinterface dbg in
+
+  let interfaces = Codegen.Interfaces.add_interface interfaces sinterface in
+  let interfaces = Codegen.Interfaces.add_interface interfaces vinterface in
+
+  let i = Codegen.Interfaces.register_exn interfaces exns_def in
+
+  i
+    (*
+  let p = Pythongen.of_interfaces i |> Pythongen.string_of_ts in
+  
+  Printf.printf "%s" p*)
