@@ -17,6 +17,7 @@ let _ =
     Plugin.interfaces;
     Control.interfaces;
     Data.interfaces;
+    Task.interfaces;
   ] in
 
   if !generate_html

@@ -40,6 +40,7 @@ let domain = Param.mk ~description:"An opaque string which represents the Xen do
 let backend = Param.mk backend_def
 let dbg = Param.mk ~name:"dbg" ~description:"Debug context from the caller" Types.string
 let blocks = Param.mk ~name:"blocks" ~description:"The list of blocks for copying" blocklist_def
+let task_id = Param.mk ~name:"task_id" Types.string
 open Idl
 
 module Datapath(R: RPC) = struct
@@ -78,6 +79,28 @@ module Datapath(R: RPC) = struct
     declare "close"
       "[close uri] is called after a disk is detached and a VM shutdown. This is an opportunity to throw away writes if the disk is not persistent."
       (uri @-> returning unit)
+
+end
+
+
+module Data (R : RPC) = struct
+  open R
+
+  let interface = R.describe
+      {Idl.Interface.name = "Data";
+       description="This interface is used for long-running data operations such as copying the contents of volumes or mirroring volumes to remote destinations";
+       version=1}
+
+  let remote = Param.mk ~description:"A URI which represents how to access a remote volume disk data." uri_def 
+
+  let blocklist = Param.mk blocklist_def
+  let copy = R.declare "copy"
+      "[copy uri domain remote blocks] copies [blocks] from the local disk to a remote URI. This may be called as part of a Volume Mirroring operation, and hence may need to cooperate with whatever process is currently mirroring writes to ensure data integrity is maintained"
+      (uri @-> domain @-> remote @-> blocklist @-> returning task_id)
+
+  let mirror = R.declare "mirror"
+      "[mirror uri domain remote] starts mirroring new writes to the volume to a remote URI (usually NBD). This is called as part of a volume mirroring process"
+      (uri @-> domain @-> remote @-> returning task_id)
 
 end
 
