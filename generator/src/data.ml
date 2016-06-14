@@ -1,5 +1,6 @@
 open Idl
-
+open Common
+    
 type exn =
   | Unimplemented of string
   [@@deriving rpc]
@@ -8,9 +9,6 @@ type domain = string
   [@@deriving rpc]
   [@@doc
     "A string representing a Xen domain on the local host. The string is guaranteed to be unique per-domain but it is not guaranteed to take any particular form. It may (for example) be a Xen domain id, a Xen VM uuid or a Xenstore path or anything else chosen by the toolstack. Implementations should not assume the string has any meaning."]
-
-type uri = string [@@deriving rpc] [@@doc
-    "A URI representing the means for accessing the volume data. The interpretation of the URI is specific to the implementation. Xapi will choose which implementation to use based on the URI scheme."]
 
 type implementation =
   | Blkback of string [@doc "use kernel blkback with the given 'params' key"]
@@ -27,20 +25,13 @@ type backend = {
 type persistent = bool [@@deriving rpc] [@@doc
   "True means the disk data is persistent and should be preserved when the datapath is closed i.e. when a VM is shutdown or rebooted. False means the data should be thrown away when the VM is shutdown or rebooted."]
 
-type blocklist = {
-  blocksize : int;
-  ranges : (int64 * int64) list
-} [@@deriving rpc] [@@doc "List of blocks for copying"]
 
 (* Create some handy parameters for use in the function definitions below *)
-let unit = Param.mk Types.unit
-let uri = Param.mk ~description:"A URI which represents how to access the volume disk data." uri_def 
+let uri = Param.mk ~description:"A URI which represents how to access the volume disk data." Common.uri_def 
 let persistent = Param.mk persistent_def
 let domain = Param.mk ~description:"An opaque string which represents the Xen domain." domain_def
 let backend = Param.mk backend_def
-let dbg = Param.mk ~name:"dbg" ~description:"Debug context from the caller" Types.string
-let blocks = Param.mk ~name:"blocks" ~description:"The list of blocks for copying" blocklist_def
-let task_id = Param.mk ~name:"task_id" Types.string
+
 open Idl
 
 module Datapath(R: RPC) = struct
@@ -86,25 +77,56 @@ end
 module Data (R : RPC) = struct
   open R
 
-  let interface = R.describe
-      {Idl.Interface.name = "Data";
-       description="This interface is used for long-running data operations such as copying the contents of volumes or mirroring volumes to remote destinations";
-       version=1}
+  let interface = describe
+      Idl.Interface.({
+          name = "Data";
+          description="This interface is used for long-running data operations such as copying the contents of volumes or mirroring volumes to remote destinations";
+          version=1})
 
+  type operation =
+    | Copy of uri * uri [@doc "Copy (src,dst) represents an on-going copy operation from the [src] URI to the [dst] URI"]
+    | Mirror of uri * uri [@doc "Mirror (src,dst) represents an on-going mirror operation from the [src] URI to the [dst] URI"]
+    [@@deriving rpc] [@@doc "The primary key for referring to a long-running operation"]
+
+  type operations = operation list [@@deriving rpc] [@@doc "A list of operations"]
+
+  type status = {
+    failed : bool [@doc "[failed] will be set to true if the operation has failed for some reason"];
+    progress : float option [@doc "[progress] will be returned for a copy operation, and ranges between 0 and 1"];
+  } [@@deriving rpc] [@@doc "Status information for on-going tasks"]
+  
   let remote = Param.mk ~description:"A URI which represents how to access a remote volume disk data." uri_def 
-
+  let operation = Param.mk operation_def
   let blocklist = Param.mk blocklist_def
-  let copy = R.declare "copy"
+  let copy = declare "copy"
       "[copy uri domain remote blocks] copies [blocks] from the local disk to a remote URI. This may be called as part of a Volume Mirroring operation, and hence may need to cooperate with whatever process is currently mirroring writes to ensure data integrity is maintained"
-      (uri @-> domain @-> remote @-> blocklist @-> returning task_id)
+      (uri @-> domain @-> remote @-> blocklist @-> returning operation)
 
-  let mirror = R.declare "mirror"
+  let mirror = declare "mirror"
       "[mirror uri domain remote] starts mirroring new writes to the volume to a remote URI (usually NBD). This is called as part of a volume mirroring process"
-      (uri @-> domain @-> remote @-> returning task_id)
+      (uri @-> domain @-> remote @-> returning operation)
 
+  let status = Param.mk status_def
+  let stat = declare "stat"
+      "[stat operation] returns the current status of [operation]. For a copy operation, this will contain progress information."
+      (operation @-> returning status)
+
+  let cancel = declare "cancel"
+      "[cancel operation] cancels a long-running operation. Note that the call may return before the operation has finished."
+      (operation @-> returning unit)
+
+  let destroy = declare "destroy"
+      "[destroy operation] destroys the information about a long-running operation. This should fail when run against an operation that is still in progress."
+      (operation @-> returning unit)
+
+  let operations = Param.mk operations_def
+  let list = declare "list"
+      "[list] returns a list of all current operations"
+      (unit @-> returning operations)
 end
 
 module Code=Datapath(Codegen)
+module D=Data(Codegen)
 
 let interfaces =
   let interface = Code.(interface
@@ -116,6 +138,14 @@ let interfaces =
                         |> close
                        ) in
 
+  let dinterface = D.(interface
+                      |> copy
+                      |> mirror
+                      |> stat
+                      |> cancel
+                      |> destroy
+                      |> list) in
+                    
   let interfaces = Codegen.Interfaces.empty
       "datapath"
       "The Plugin interface"
@@ -123,7 +153,9 @@ let interfaces =
   in
 
   let interface = Codegen.Interface.prepend_arg interface dbg in
+  let dinterface = Codegen.Interface.prepend_arg dinterface dbg in
   let interfaces = Codegen.Interfaces.add_interface interfaces interface in
+  let interfaces = Codegen.Interfaces.add_interface interfaces dinterface in
   let interfaces = Codegen.Interfaces.register_exn interfaces exn_def in
   interfaces
 

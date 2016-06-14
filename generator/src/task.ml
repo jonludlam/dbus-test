@@ -39,29 +39,29 @@ let dbg = Param.mk ~name:"dbg" ~description:"Debug context from the caller" Type
 module Task(R : RPC) = struct
   open R
       
-  let interface = R.describe {
-      Idl.Interface.name = "task";
+  let interface = describe Idl.Interface.({
+      name = "Task";
       description = "The task interface is for querying the status of asynchronous tasks. All long-running
         operations are associated with tasks, including copying and mirroring of data.";
-      version=1}
+      version=1 })
 
   let task = Param.mk id_def
   let result = Param.mk ~name:"result" task_def
-  let stat = R.declare "stat"
+  let stat = declare "stat"
       "[stat task_id] returns the status of the task"
       (task @-> returning result)
 
-  let cancel = R.declare "cancel"
+  let cancel = declare "cancel"
       "[cancel task_id] performs a best-effort cancellation of an ongoing task. The effect of this should leave the system in one of two states: Either that the task has completed successfully, or that it had never been made at all. The call should return immediately and the status of the task can the be queried via the [stat] call."
       (task @-> returning unit)
 
-  let destroy = R.declare "destroy"
+  let destroy = declare "destroy"
       "[destroy task_id] should remove all traces of the task_id. This call should fail if the task is currently in progress."
       (task @-> returning unit)
 
   let task_list = Param.mk task_list_def
-  let list = R.declare "list"
-      "[list] should return a list of all of the tasks the plugin is aware of"
+  let ls = declare "ls"
+      "[ls] should return a list of all of the tasks the plugin is aware of"
       (unit @-> returning task_list)
 end
 
@@ -72,7 +72,7 @@ let interfaces =
                         |> stat
                         |> cancel
                         |> destroy
-                        |> list
+                        |> ls
                        ) in
 
   let interfaces = Codegen.Interfaces.empty

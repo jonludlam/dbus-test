@@ -1,11 +1,12 @@
 open Idl
+open Common
 
 type exns =
-  | Sr_not_attached of string
-  | SR_does_not_exist of string
-  | Volume_does_not_exist of string
-  | Unimplemented of string
-  | Cancelled of string
+  | Sr_not_attached of string [@doc "An SR must be attached in order to access volumes"]
+  | SR_does_not_exist of string [@doc "The specified SR could not be found"]
+  | Volume_does_not_exist of string [@doc "The specified volume could not be found in the SR"]
+  | Unimplemented of string [@doc "The operation has not been implemented"]
+  | Cancelled of string [@doc "The operation has not been implemented"]
     [@@deriving rpc]
 
 type health =
@@ -77,7 +78,6 @@ type volume = {
 let sr = Param.mk ~name:"sr" ~description:"The Storage Repository"
     Types.string
 
-let unit = Param.mk Types.unit
 
 
 module Volume(R: RPC) = struct
@@ -151,11 +151,17 @@ module Volume(R: RPC) = struct
   let stat = R.declare "stat"
       "[stat sr volume] returns metadata associated with [volume]."
       (sr @-> key @-> returning volume)
+
+  let key2 = {key with Param.name="key2"}
+  let blocklist_result = Param.mk blocklist_def
+  let compare = R.declare "compare"
+      "[compare sr volume1 volume2] compares the two volumes and returns a result of type blocklist that describes the differences between the two volumes. If the two volumes are unrelated, or the second volume does not exist, the result will be a list of the blocks that are non-empty in volume1. If this information is not available to the plugin, it should return a result indicating that all blocks are in use."
+      (sr @-> key @-> key2 @-> returning blocklist_result)
 end
 
 type probe_result = {
   srs : sr_stat list [@doc "SRs found on this storage device"];
-  uris : Data.uri list [@doc "Other possible URIs which may contain SRs"];
+  uris : uri list [@doc "Other possible URIs which may contain SRs"];
 } [@@deriving rpc]
 
 module Sr(R : RPC) = struct
@@ -217,7 +223,7 @@ module Sr(R : RPC) = struct
       (sr @-> new_description @-> returning unit)
 
   let volumes = Param.mk ~name:"volumes"
-      Types.({name="volumes"; description="A list of volumes"; ty=Array (tydesc_of_volume)})
+      Types.({name="volumes"; description="A list of volumes"; ty=Array (typ_of_volume)})
       
   let ls = R.declare "ls"
       "[ls sr] returns a list of volumes contained within an attached SR."
@@ -227,8 +233,6 @@ end
 module VolumeCode=Volume(Codegen)
 module SrCode=Sr(Codegen)
 
-let dbg = Param.mk ~name:"dbg" ~description:"Debug context from the caller" Types.string
-    
 let interfaces =
   let interfaces = Codegen.Interfaces.empty
       "volume"
@@ -248,6 +252,7 @@ let interfaces =
       |> unset
       |> resize
       |> stat
+      |> compare
     ) in
   
   let vinterface = Codegen.Interface.prepend_arg vinterface dbg in
