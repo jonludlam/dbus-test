@@ -7,7 +7,7 @@ build:
 	mkdir -p ocaml/examples
 	mkdir -p python/xapi/storage/api
 	./generator/main.native
-	make -C ocaml
+#	make -C ocaml
 	make -C python
 
 .PHONY: html
