@@ -1,0 +1,110 @@
+<!doctype html>
+<html class="no-js" lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Xapi storage interfaces</title>
+    <link rel="stylesheet" href="css/foundation.css" />
+    <link rel="stylesheet" href="css/app.css" />
+
+    <script src="https://google-code-prettify.googlecode.com/svn/loader/run_prettify.js"></script>
+  </head>
+  <body>
+<!DOCTYPE html>
+<div class="title-bar" data-responsive-toggle="main-menu" data-hide-for="medium"><button class="menu-icon" type="button" data-toggle=""></button><div class="title-bar-title">Menu</div></div><div class="top-bar" id="main-menu"><div class="top-bar-left"><ul class="menu" data-dropdown-menu=""><li class="menu-text">SMAPIv3</li></ul></div><div class="top-bar-right"><ul class="menu" data-responsive-menu="drilldown medium-dropdown"><li class="has-submenu"><a href="features.html">Learn</a><ul class="submenu menu vertical" data-submenu=""><li><a href="features.html">Features</a></li><li><a href="concepts.html">Concepts</a></li><li><a href="architecture.html">Architecture</a></li><li><a href="faq.html">FAQ</a></li></ul></li><li><a href="#">Develop</a><ul class="submenu menu vertical" data-submenu=""><li><a href="plugin.html">plugin</a></li><li><a href="volume.html">volume</a></li><li><a href="datapath.html">datapath</a></li><li><a href="task.html">task</a></li></ul></li><li><a href="#">Support</a><ul class="submenu menu vertical" data-submenu=""><li><a href="contact.html">Mailing list</a></li><li><a href="contact.html">Issue tracker</a></li><li><a href="contact.html">IRC</a></li></ul></li><li class="active"><a href="getstarted.html">Get Started</a></li></ul></div></div><!DOCTYPE html>
+<div class="row"><div class="large-3 medium-3 columns"><ul class="menu vertical"><li class="docs-nav-title">types</li><li><a href="#a-id">id</a></li><li><a href="#a-string">string</a></li><li><a href="#a-task">task</a></li><li><a href="#a-unit">unit</a></li><li><a href="#a-task_list">task_list</a></li><li class="docs-nav-title">Task</li><li><a href="#a-Task-stat">stat</a></li><li><a href="#a-Task-cancel">cancel</a></li><li><a href="#a-Task-destroy">destroy</a></li><li><a href="#a-Task-ls">ls</a></li></ul></div><div class="large-9 medium-9 columns"><h1>task</h1><p>The Task interface is required if the backend supports long-running tasks.</p><h4 id="a-id">type id = string</h4><p>Unique identifier for a task</p><h4 id="a-string">type string = string</h4><p>String</p><h4 id="a-task">type task = struct  { ... }</h4><p></p><p>Members:</p><table width="100%"><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><pre>id</pre></td><td><pre>string</pre></td><td></td></tr><tr><td><pre>debug_info</pre></td><td><pre>string</pre></td><td></td></tr><tr><td><pre>ctime</pre></td><td><pre>float</pre></td><td></td></tr><tr><td><pre>state</pre></td><td><pre>variant { ... }</pre></td><td></td></tr></tbody></table><h4 id="a-unit">type unit = unit</h4><p>Unit</p><h4 id="a-task_list">type task_list = string list</h4><p></p><h2 id="a-Task">Task</h2><p>The task interface is for querying the status of asynchronous tasks. All long-running
+        operations are associated with tasks, including copying and mirroring of data.</p><h3 id="a-Task-stat">stat</h3><p>[stat task_id] returns the status of the task</p><ul class="tabs" id="tab-stat" data-tabs=""><li><li class="tabs-title is-active"><a href="#defn-stat" aria-selected="true">Definition</a></li></li><li><li class="tabs-title"><a href="#ocaml-stat">OCaml example</a></li></li><li><li class="tabs-title"><a href="#python-stat">Python example</a></li></li></ul><div class="tabs-content" data-tabs-content="tab-stat"><div class="tabs-panel is-active" id="defn-stat"><table width="100%"><thead><tr><th>Name</th><th>Direction</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>dbg</code></td><td>in</td><td><code>string</code></td><td>Debug context from the caller</td></tr><tr><td><code>id</code></td><td>in</td><td><code>string</code></td><td>Unique identifier for a task</td></tr><tr><td><code>result</code></td><td>out</td><td><code>struct  { ... }</code></td><td></td></tr></tbody></table></div><div class="tabs-panel" id="ocaml-stat"><h4>Client:</h4><h4>Server:</h4></div><div class="tabs-panel" id="python-stat"><h4>Client:</h4><pre class="prettyprint lang-py">
+import xmlrpclib
+import xapi
+from storage import *
+
+if __name__ == &quot;__main__&quot;:
+    c = xapi.connect()
+    results = c.Task.stat({ dbg: &quot;string&quot;, id: &quot;string&quot; })
+    print (repr(results))</pre><h4>Server:</h4><pre class="prettyprint lang-py">
+import xmlrpclib
+import xapi
+from storage import *
+
+class Task_myimplementation(Task_skeleton):
+    # by default each method will return a Not_implemented error
+    # ...
+    def stat(self, dbg, id):
+        &quot;&quot;&quot;The task interface is for querying the status of asynchronous tasks. All long-running
+        operations are associated with tasks, including copying and mirroring of data.&quot;&quot;&quot;
+        result = {}
+        result[&quot;result&quot;] = { &quot;id&quot;: &quot;string&quot;, &quot;debug_info&quot;: &quot;string&quot;, &quot;ctime&quot;: 1.1, &quot;state&quot;: None }
+        return result
+    # ...</pre></div></div><h3 id="a-Task-cancel">cancel</h3><p>[cancel task_id] performs a best-effort cancellation of an ongoing task. The effect of this should leave the system in one of two states: Either that the task has completed successfully, or that it had never been made at all. The call should return immediately and the status of the task can the be queried via the [stat] call.</p><ul class="tabs" id="tab-cancel" data-tabs=""><li><li class="tabs-title is-active"><a href="#defn-cancel" aria-selected="true">Definition</a></li></li><li><li class="tabs-title"><a href="#ocaml-cancel">OCaml example</a></li></li><li><li class="tabs-title"><a href="#python-cancel">Python example</a></li></li></ul><div class="tabs-content" data-tabs-content="tab-cancel"><div class="tabs-panel is-active" id="defn-cancel"><table width="100%"><thead><tr><th>Name</th><th>Direction</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>dbg</code></td><td>in</td><td><code>string</code></td><td>Debug context from the caller</td></tr><tr><td><code>id</code></td><td>in</td><td><code>string</code></td><td>Unique identifier for a task</td></tr><tr><td><code>unit</code></td><td>out</td><td><code>unit</code></td><td>Unit</td></tr></tbody></table></div><div class="tabs-panel" id="ocaml-cancel"><h4>Client:</h4><h4>Server:</h4></div><div class="tabs-panel" id="python-cancel"><h4>Client:</h4><pre class="prettyprint lang-py">
+import xmlrpclib
+import xapi
+from storage import *
+
+if __name__ == &quot;__main__&quot;:
+    c = xapi.connect()
+    results = c.Task.cancel({ dbg: &quot;string&quot;, id: &quot;string&quot; })
+    print (repr(results))</pre><h4>Server:</h4><pre class="prettyprint lang-py">
+import xmlrpclib
+import xapi
+from storage import *
+
+class Task_myimplementation(Task_skeleton):
+    # by default each method will return a Not_implemented error
+    # ...
+    def cancel(self, dbg, id):
+        &quot;&quot;&quot;The task interface is for querying the status of asynchronous tasks. All long-running
+        operations are associated with tasks, including copying and mirroring of data.&quot;&quot;&quot;
+        result = {}
+        return result
+    # ...</pre></div></div><h3 id="a-Task-destroy">destroy</h3><p>[destroy task_id] should remove all traces of the task_id. This call should fail if the task is currently in progress.</p><ul class="tabs" id="tab-destroy" data-tabs=""><li><li class="tabs-title is-active"><a href="#defn-destroy" aria-selected="true">Definition</a></li></li><li><li class="tabs-title"><a href="#ocaml-destroy">OCaml example</a></li></li><li><li class="tabs-title"><a href="#python-destroy">Python example</a></li></li></ul><div class="tabs-content" data-tabs-content="tab-destroy"><div class="tabs-panel is-active" id="defn-destroy"><table width="100%"><thead><tr><th>Name</th><th>Direction</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>dbg</code></td><td>in</td><td><code>string</code></td><td>Debug context from the caller</td></tr><tr><td><code>id</code></td><td>in</td><td><code>string</code></td><td>Unique identifier for a task</td></tr><tr><td><code>unit</code></td><td>out</td><td><code>unit</code></td><td>Unit</td></tr></tbody></table></div><div class="tabs-panel" id="ocaml-destroy"><h4>Client:</h4><h4>Server:</h4></div><div class="tabs-panel" id="python-destroy"><h4>Client:</h4><pre class="prettyprint lang-py">
+import xmlrpclib
+import xapi
+from storage import *
+
+if __name__ == &quot;__main__&quot;:
+    c = xapi.connect()
+    results = c.Task.destroy({ dbg: &quot;string&quot;, id: &quot;string&quot; })
+    print (repr(results))</pre><h4>Server:</h4><pre class="prettyprint lang-py">
+import xmlrpclib
+import xapi
+from storage import *
+
+class Task_myimplementation(Task_skeleton):
+    # by default each method will return a Not_implemented error
+    # ...
+    def destroy(self, dbg, id):
+        &quot;&quot;&quot;The task interface is for querying the status of asynchronous tasks. All long-running
+        operations are associated with tasks, including copying and mirroring of data.&quot;&quot;&quot;
+        result = {}
+        return result
+    # ...</pre></div></div><h3 id="a-Task-ls">ls</h3><p>[ls] should return a list of all of the tasks the plugin is aware of</p><ul class="tabs" id="tab-ls" data-tabs=""><li><li class="tabs-title is-active"><a href="#defn-ls" aria-selected="true">Definition</a></li></li><li><li class="tabs-title"><a href="#ocaml-ls">OCaml example</a></li></li><li><li class="tabs-title"><a href="#python-ls">Python example</a></li></li></ul><div class="tabs-content" data-tabs-content="tab-ls"><div class="tabs-panel is-active" id="defn-ls"><table width="100%"><thead><tr><th>Name</th><th>Direction</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>dbg</code></td><td>in</td><td><code>string</code></td><td>Debug context from the caller</td></tr><tr><td><code>unit</code></td><td>in</td><td><code>unit</code></td><td>Unit</td></tr><tr><td><code>task_list</code></td><td>out</td><td><code>string list</code></td><td></td></tr></tbody></table></div><div class="tabs-panel" id="ocaml-ls"><h4>Client:</h4><h4>Server:</h4></div><div class="tabs-panel" id="python-ls"><h4>Client:</h4><pre class="prettyprint lang-py">
+import xmlrpclib
+import xapi
+from storage import *
+
+if __name__ == &quot;__main__&quot;:
+    c = xapi.connect()
+    results = c.Task.ls({ dbg: &quot;string&quot;, unit: None })
+    print (repr(results))</pre><h4>Server:</h4><pre class="prettyprint lang-py">
+import xmlrpclib
+import xapi
+from storage import *
+
+class Task_myimplementation(Task_skeleton):
+    # by default each method will return a Not_implemented error
+    # ...
+    def ls(self, dbg):
+        &quot;&quot;&quot;The task interface is for querying the status of asynchronous tasks. All long-running
+        operations are associated with tasks, including copying and mirroring of data.&quot;&quot;&quot;
+        result = {}
+        result[&quot;task_list&quot;] = [ &quot;string&quot;, &quot;string&quot; ]
+        return result
+    # ...</pre></div></div></div></div>
+
+    <script src="js/vendor/jquery.js"></script>
+    <script src="js/vendor/foundation.min.js"></script>
+    <script>
+      $(document).foundation();
+    </script>
+  </body>
+</html>

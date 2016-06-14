@@ -11,270 +11,132 @@
   </head>
   <body>
 <!DOCTYPE html>
+<div class="title-bar" data-responsive-toggle="main-menu" data-hide-for="medium"><button class="menu-icon" type="button" data-toggle=""></button><div class="title-bar-title">Menu</div></div><div class="top-bar" id="main-menu"><div class="top-bar-left"><ul class="menu" data-dropdown-menu=""><li class="menu-text">SMAPIv3</li></ul></div><div class="top-bar-right"><ul class="menu" data-responsive-menu="drilldown medium-dropdown"><li class="has-submenu"><a href="features.html">Learn</a><ul class="submenu menu vertical" data-submenu=""><li><a href="features.html">Features</a></li><li><a href="concepts.html">Concepts</a></li><li><a href="architecture.html">Architecture</a></li><li><a href="faq.html">FAQ</a></li></ul></li><li><a href="#">Develop</a><ul class="submenu menu vertical" data-submenu=""><li><a href="plugin.html">plugin</a></li><li><a href="volume.html">volume</a></li><li><a href="datapath.html">datapath</a></li><li><a href="task.html">task</a></li></ul></li><li><a href="#">Support</a><ul class="submenu menu vertical" data-submenu=""><li><a href="contact.html">Mailing list</a></li><li><a href="contact.html">Issue tracker</a></li><li><a href="contact.html">IRC</a></li></ul></li><li class="active"><a href="getstarted.html">Get Started</a></li></ul></div></div><!DOCTYPE html>
+<div class="row"><div class="large-3 medium-3 columns"><ul class="menu vertical"><li class="docs-nav-title">types</li><li><a href="#a-blocklist">blocklist</a></li><li><a href="#a-operation">operation</a></li><li><a href="#a-status">status</a></li><li><a href="#a-operations">operations</a></li><li><a href="#a-persistent">persistent</a></li><li><a href="#a-domain">domain</a></li><li><a href="#a-string">string</a></li><li><a href="#a-uri">uri</a></li><li><a href="#a-backend">backend</a></li><li><a href="#a-unit">unit</a></li><li class="docs-nav-title">Data</li><li><a href="#a-Data-copy">copy</a></li><li><a href="#a-Data-mirror">mirror</a></li><li><a href="#a-Data-stat">stat</a></li><li><a href="#a-Data-cancel">cancel</a></li><li><a href="#a-Data-destroy">destroy</a></li><li><a href="#a-Data-list">list</a></li><li class="docs-nav-title">Datapath</li><li><a href="#a-Datapath-open">open</a></li><li><a href="#a-Datapath-attach">attach</a></li><li><a href="#a-Datapath-activate">activate</a></li><li><a href="#a-Datapath-deactivate">deactivate</a></li><li><a href="#a-Datapath-detach">detach</a></li><li><a href="#a-Datapath-close">close</a></li></ul></div><div class="large-9 medium-9 columns"><h1>datapath</h1><p>The xapi toolstack expects all plugins to support a basic query interface.</p><h4 id="a-blocklist">type blocklist = struct  { ... }</h4><p>List of blocks for copying</p><p>Members:</p><table width="100%"><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><pre>blocksize</pre></td><td><pre>int</pre></td><td>size of the individual blocks</td></tr><tr><td><pre>ranges</pre></td><td><pre>int64 * int64 list</pre></td><td>list of block ranges, where a range is a (start,length) pair, measured in units of [blocksize]</td></tr></tbody></table><h4 id="a-operation">type operation = variant { ... }</h4><p>The primary key for referring to a long-running operation</p><p>Constructors:</p><table width="100%"><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><pre>Copy</pre></td><td><pre>string * string</pre></td><td>Copy (src,dst) represents an on-going copy operation from the [src] URI to the [dst] URI</td></tr><tr><td><pre>Mirror</pre></td><td><pre>string * string</pre></td><td>Mirror (src,dst) represents an on-going mirror operation from the [src] URI to the [dst] URI</td></tr></tbody></table><h4 id="a-status">type status = struct  { ... }</h4><p>Status information for on-going tasks</p><p>Members:</p><table width="100%"><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><pre>failed</pre></td><td><pre>bool</pre></td><td>[failed] will be set to true if the operation has failed for some reason</td></tr><tr><td><pre>progress</pre></td><td><pre>float option</pre></td><td>[progress] will be returned for a copy operation, and ranges between 0 and 1</td></tr></tbody></table><h4 id="a-operations">type operations = variant { ... } list</h4><p>A list of operations</p><h4 id="a-persistent">type persistent = bool</h4><p>True means the disk data is persistent and should be preserved when the datapath is closed i.e. when a VM is shutdown or rebooted. False means the data should be thrown away when the VM is shutdown or rebooted.</p><h4 id="a-domain">type domain = string</h4><p>A string representing a Xen domain on the local host. The string is guaranteed to be unique per-domain but it is not guaranteed to take any particular form. It may (for example) be a Xen domain id, a Xen VM uuid or a Xenstore path or anything else chosen by the toolstack. Implementations should not assume the string has any meaning.</p><h4 id="a-string">type string = string</h4><p>String</p><h4 id="a-uri">type uri = string</h4><p>A URI representing the means for accessing the volume data. The interpretation of the URI is specific to the implementation. Xapi will choose which implementation to use based on the URI scheme.</p><h4 id="a-backend">type backend = struct  { ... }</h4><p>A description of which Xen block backend to use. The toolstack needs this to setup the shared memory connection to blkfront in the VM.</p><p>Members:</p><table width="100%"><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><pre>domain_uuid</pre></td><td><pre>string</pre></td><td>UUID of the domain hosting the backend</td></tr><tr><td><pre>implementation</pre></td><td><pre>variant { ... }</pre></td><td>choice of implementation technology</td></tr></tbody></table><h4 id="a-unit">type unit = unit</h4><p>Unit</p><h2 id="a-Data">Data</h2><p>This interface is used for long-running data operations such as copying the contents of volumes or mirroring volumes to remote destinations</p><h3 id="a-Data-copy">copy</h3><p>[copy uri domain remote blocks] copies [blocks] from the local disk to a remote URI. This may be called as part of a Volume Mirroring operation, and hence may need to cooperate with whatever process is currently mirroring writes to ensure data integrity is maintained</p><ul class="tabs" id="tab-copy" data-tabs=""><li><li class="tabs-title is-active"><a href="#defn-copy" aria-selected="true">Definition</a></li></li><li><li class="tabs-title"><a href="#ocaml-copy">OCaml example</a></li></li><li><li class="tabs-title"><a href="#python-copy">Python example</a></li></li></ul><div class="tabs-content" data-tabs-content="tab-copy"><div class="tabs-panel is-active" id="defn-copy"><table width="100%"><thead><tr><th>Name</th><th>Direction</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>dbg</code></td><td>in</td><td><code>string</code></td><td>Debug context from the caller</td></tr><tr><td><code>uri</code></td><td>in</td><td><code>string</code></td><td>A URI which represents how to access the volume disk data.</td></tr><tr><td><code>domain</code></td><td>in</td><td><code>string</code></td><td>An opaque string which represents the Xen domain.</td></tr><tr><td><code>uri</code></td><td>in</td><td><code>string</code></td><td>A URI which represents how to access a remote volume disk data.</td></tr><tr><td><code>blocklist</code></td><td>in</td><td><code>struct  { ... }</code></td><td>List of blocks for copying</td></tr><tr><td><code>operation</code></td><td>out</td><td><code>variant { ... }</code></td><td>The primary key for referring to a long-running operation</td></tr></tbody></table></div><div class="tabs-panel" id="ocaml-copy"><h4>Client:</h4><h4>Server:</h4></div><div class="tabs-panel" id="python-copy"><h4>Client:</h4><pre class="prettyprint lang-py">
+import xmlrpclib
+import xapi
+from storage import *
 
-<div class="title-bar" data-responsive-toggle="main-menu" data-hide-for="medium">
-  <button class="menu-icon" type="button" data-toggle=""></button>
-  <div class="title-bar-title">Menu</div>
-</div>
+if __name__ == &quot;__main__&quot;:
+    c = xapi.connect()
+    results = c.Data.copy({ dbg: &quot;string&quot;, uri: &quot;string&quot;, domain: &quot;string&quot;, uri: &quot;string&quot;, blocklist: { &quot;blocksize&quot;: 0L, &quot;ranges&quot;: [ [], [] ] } })
+    print (repr(results))</pre><h4>Server:</h4><pre class="prettyprint lang-py">
+import xmlrpclib
+import xapi
+from storage import *
 
-    <div class="top-bar" id="main-menu">
-      <div class="top-bar-left">
-	<ul class="menu" data-dropdown-menu="">
-	  <li class="menu-text">SMAPIv3</li>
-	</ul>
-      </div>
-      <div class="top-bar-right">
-	<ul class="menu" data-responsive-menu="drilldown medium-dropdown">
-	  <li class="has-submenu">
-            <a href="features.html">Learn</a>
-            <ul class="submenu menu vertical" data-submenu="">
-              <li><a href="features.html">Features</a></li>
-              <li><a href="concepts.html">Concepts</a></li>
-              <li><a href="architecture.html">Architecture</a></li>
-              <li><a href="volume_migration.html">Volume migration</a></li>
-              <li><a href="faq.html">FAQ</a></li>
-            </ul>
-	  </li>
-	  <li>
-            <a href="#">Develop</a>
-            <ul class="submenu menu vertical">
-              
-      <li><a href="plugin.html">plugin</a></li>
-    
-      <li><a href="volume.html">volume</a></li>
-    
-      <li><a href="datapath.html">datapath</a></li>
-    
-            </ul>
-	  </li>
-	  <li>
-            <a href="#">Support</a>
-            <ul class="submenu menu vertical">
-              <li><a href="contact.html">Mailing list</a></li>
-              <li><a href="contact.html">Issue tracker</a></li>
-              <li><a href="contact.html">IRC</a></li>
-            </ul>
-	  </li>
-	  <li class="active"><a href="getstarted.html">Get Started</a></li>
-	</ul>
-      </div>
-    </div>
-<!DOCTYPE html>
+class Data_myimplementation(Data_skeleton):
+    # by default each method will return a Not_implemented error
+    # ...
+    def copy(self, dbg, uri, domain, uri, blocklist):
+        &quot;&quot;&quot;This interface is used for long-running data operations such as copying the contents of volumes or mirroring volumes to remote destinations&quot;&quot;&quot;
+        result = {}
+        result[&quot;operation&quot;] = None
+        return result
+    # ...</pre></div></div><h3 id="a-Data-mirror">mirror</h3><p>[mirror uri domain remote] starts mirroring new writes to the volume to a remote URI (usually NBD). This is called as part of a volume mirroring process</p><ul class="tabs" id="tab-mirror" data-tabs=""><li><li class="tabs-title is-active"><a href="#defn-mirror" aria-selected="true">Definition</a></li></li><li><li class="tabs-title"><a href="#ocaml-mirror">OCaml example</a></li></li><li><li class="tabs-title"><a href="#python-mirror">Python example</a></li></li></ul><div class="tabs-content" data-tabs-content="tab-mirror"><div class="tabs-panel is-active" id="defn-mirror"><table width="100%"><thead><tr><th>Name</th><th>Direction</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>dbg</code></td><td>in</td><td><code>string</code></td><td>Debug context from the caller</td></tr><tr><td><code>uri</code></td><td>in</td><td><code>string</code></td><td>A URI which represents how to access the volume disk data.</td></tr><tr><td><code>domain</code></td><td>in</td><td><code>string</code></td><td>An opaque string which represents the Xen domain.</td></tr><tr><td><code>uri</code></td><td>in</td><td><code>string</code></td><td>A URI which represents how to access a remote volume disk data.</td></tr><tr><td><code>operation</code></td><td>out</td><td><code>variant { ... }</code></td><td>The primary key for referring to a long-running operation</td></tr></tbody></table></div><div class="tabs-panel" id="ocaml-mirror"><h4>Client:</h4><h4>Server:</h4></div><div class="tabs-panel" id="python-mirror"><h4>Client:</h4><pre class="prettyprint lang-py">
+import xmlrpclib
+import xapi
+from storage import *
 
-    <div class="row">
+if __name__ == &quot;__main__&quot;:
+    c = xapi.connect()
+    results = c.Data.mirror({ dbg: &quot;string&quot;, uri: &quot;string&quot;, domain: &quot;string&quot;, uri: &quot;string&quot; })
+    print (repr(results))</pre><h4>Server:</h4><pre class="prettyprint lang-py">
+import xmlrpclib
+import xapi
+from storage import *
 
-    
-      <div class="large-3 medium-3 columns">
-        <ul class="menu vertical">
-          <li class="docs-nav-title">types</li>
-          
-      <li><a href="#a-14">debug_info</a></li>
-    
-      <li><a href="#a-15">domain</a></li>
-    
-      <li><a href="#a-16">uri</a></li>
-    
-      <li><a href="#a-17">implementation</a></li>
-    
-      <li><a href="#a-18">backend</a></li>
-    
-          
-      <li class="docs-nav-title">interface: Datapath</li>
-      
-      
-      <li><a href="#a-Datapath-open">open</a></li>
-    
-      <li><a href="#a-Datapath-attach">attach</a></li>
-    
-      <li><a href="#a-Datapath-activate">activate</a></li>
-    
-      <li><a href="#a-Datapath-deactivate">deactivate</a></li>
-    
-      <li><a href="#a-Datapath-detach">detach</a></li>
-    
-      <li><a href="#a-Datapath-close">close</a></li>
-    
-    
-          <li class="docs-nav-title">exception</li>
-          <li><a href="#a-exceptions">Exceptions</a></li>
-        </ul>
-      </div>
-  
+class Data_myimplementation(Data_skeleton):
+    # by default each method will return a Not_implemented error
+    # ...
+    def mirror(self, dbg, uri, domain, uri):
+        &quot;&quot;&quot;This interface is used for long-running data operations such as copying the contents of volumes or mirroring volumes to remote destinations&quot;&quot;&quot;
+        result = {}
+        result[&quot;operation&quot;] = None
+        return result
+    # ...</pre></div></div><h3 id="a-Data-stat">stat</h3><p>[stat operation] returns the current status of [operation]. For a copy operation, this will contain progress information.</p><ul class="tabs" id="tab-stat" data-tabs=""><li><li class="tabs-title is-active"><a href="#defn-stat" aria-selected="true">Definition</a></li></li><li><li class="tabs-title"><a href="#ocaml-stat">OCaml example</a></li></li><li><li class="tabs-title"><a href="#python-stat">Python example</a></li></li></ul><div class="tabs-content" data-tabs-content="tab-stat"><div class="tabs-panel is-active" id="defn-stat"><table width="100%"><thead><tr><th>Name</th><th>Direction</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>dbg</code></td><td>in</td><td><code>string</code></td><td>Debug context from the caller</td></tr><tr><td><code>operation</code></td><td>in</td><td><code>variant { ... }</code></td><td>The primary key for referring to a long-running operation</td></tr><tr><td><code>status</code></td><td>out</td><td><code>struct  { ... }</code></td><td>Status information for on-going tasks</td></tr></tbody></table></div><div class="tabs-panel" id="ocaml-stat"><h4>Client:</h4><h4>Server:</h4></div><div class="tabs-panel" id="python-stat"><h4>Client:</h4><pre class="prettyprint lang-py">
+import xmlrpclib
+import xapi
+from storage import *
 
-    <div class="large-9 medium-9 columns">
-      <h1>datapath</h1>
-      <p>The Datapath plugin takes a URI which points to virtual disk data and chooses a Xen datapath implementation: driver domain, blkback implementation and caching strategy.</p>
-      
-    <h4 id="a-14">type debug_info = string</h4>
-    <p> Debug context from the caller </p>
-  
-    <h4 id="a-15">type domain = string</h4>
-    <p> A string representing a Xen domain on the local host. The string is guaranteed to be unique per-domain but it is not guaranteed to take any particular form. It may (for example) be a Xen domain id, a Xen VM uuid or a Xenstore path or anything else chosen by the toolstack. Implementations should not assume the string has any meaning. </p>
-  
-    <h4 id="a-16">type uri = string</h4>
-    <p> A URI representing the means for accessing the volume data. The interpretation of the URI is specific to the implementation. Xapi will choose which implementation to use based on the URI scheme. </p>
-  
-    <h4 id="a-17">type implementation = variant { ... }</h4>
-    <p> The choice of blkback to use. </p>
-  
-      <p>Constructors:</p>
-    
-    <table width="100%">
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Type</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-      
-      <tr>
-        <td><pre>Blkback</pre></td>
-        <td><pre>string</pre></td>
-        <td>use kernel blkback with the given 'params' key</td></tr>
-    
-      <tr>
-        <td><pre>Tapdisk3</pre></td>
-        <td><pre>string</pre></td>
-        <td>use userspace tapdisk3 with the given 'params' key</td></tr>
-    
-      <tr>
-        <td><pre>Qdisk</pre></td>
-        <td><pre>string</pre></td>
-        <td>use userspace qemu qdisk with the given 'params' key</td></tr>
-    
-      </tbody>
-    </table>
-  
-    <h4 id="a-18">type backend = struct  { ... }</h4>
-    <p> A description of which Xen block backend to use. The toolstack needs this to setup the shared memory connection to blkfront in the VM. </p>
-  
-      <p>Members:</p>
-    
-    <table width="100%">
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Type</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-      
-      <tr>
-        <td><pre>domain_uuid</pre></td>
-        <td><pre>string</pre></td>
-        <td>UUID of the domain hosting the backend</td></tr>
-    
-      <tr>
-        <td><pre>implementation</pre></td>
-        <td><pre>implementation</pre></td>
-        <td>choice of implementation technology</td></tr>
-    
-      </tbody>
-    </table>
-  
-      
-    <h2 id="a-Datapath">Datapath</h2>
-    <p>Xapi will call the functions here on VM start/shutdown/suspend/resume/migrate. Every function is idempotent. Every function takes a domain parameter which allows the implementation to track how many domains are currently using the volume.</p>
-    
-    
-    <h3 id="a-Datapath-open">open</h3>
-    <p>[open uri persistent] is called before a disk is attached to a VM. If persistent is true then care should be taken to persist all writes to the disk. If persistent is false then the implementation should configure a temporary location for writes so they can be thrown away on [close].</p>
-    
-    <ul class="tabs" data-tabs="" id="tab-open">
-     <li class="tabs-title is-active"><a href="#defn-open" aria-selected="true">Definition</a></li>
-     <li class="tabs-title"><a href="#ocaml-open">OCaml example</a></li>
-     <li class="tabs-title"><a href="#python-open">Python example</a></li>
-    </ul>
-    <div class="tabs-content" data-tabs-content="tab-open">
-      <div class="tabs-panel is-active" id="defn-open">
-        
-  <table width="100%">
-  <thead>
-    <tr>
-      <th>Name</th>
-      <th>Direction</th>
-      <th>Type</th>
-      <th>Description</th>
-    </tr>
-  </thead>
-  <tbody>
-    
-    <tr>
-      <td><code>dbg</code></td>
-      <td>in</td>
-      <td><code> <a href="#a-14">debug_info</a> </code></td>
-      <td>Debug context from the caller</td>
-    </tr>
-  
-    <tr>
-      <td><code>uri</code></td>
-      <td>in</td>
-      <td><code> <a href="#a-16">uri</a> </code></td>
-      <td>A URI which represents how to access the volume disk data.</td>
-    </tr>
-  
-    <tr>
-      <td><code>persistent</code></td>
-      <td>in</td>
-      <td><code>bool</code></td>
-      <td>True means the disk data is persistent and should be preserved when the datapath is closed i.e. when a VM is shutdown or rebooted. False means the data should be thrown away when the VM is shutdown or rebooted.</td>
-    </tr>
-  
-  </tbody>
-  </table>
-  
-      </div>
-      <div class="tabs-panel" id="ocaml-open">
-        <h4>Client</h4>
-        
-<pre>
-<span style="color:#990000">(* these directives only needed in a toplevel: *)</span>
-#require <span style="color:#aa4444">&quot;xcp-api-client&quot;</span>;;
-#require <span style="color:#aa4444">&quot;lwt&quot;</span>;;
-#require <span style="color:#aa4444">&quot;lwt.syntax&quot;</span>;;
-#require <span style="color:#aa4444">&quot;rpc.unix&quot;</span>;;
+if __name__ == &quot;__main__&quot;:
+    c = xapi.connect()
+    results = c.Data.stat({ dbg: &quot;string&quot;, operation: None })
+    print (repr(results))</pre><h4>Server:</h4><pre class="prettyprint lang-py">
+import xmlrpclib
+import xapi
+from storage import *
 
-<span style="color:#cc9900">open</span> <span style="color:#0033cc">S</span>
-<span style="color:#cc9900">open</span> <span style="color:#0033cc">Datapath</span>
-<span style="color:#cc9900">open</span> <span style="color:#0033cc">Types</span>
+class Data_myimplementation(Data_skeleton):
+    # by default each method will return a Not_implemented error
+    # ...
+    def stat(self, dbg, operation):
+        &quot;&quot;&quot;This interface is used for long-running data operations such as copying the contents of volumes or mirroring volumes to remote destinations&quot;&quot;&quot;
+        result = {}
+        result[&quot;status&quot;] = { &quot;failed&quot;: True, &quot;progress&quot;: None }
+        return result
+    # ...</pre></div></div><h3 id="a-Data-cancel">cancel</h3><p>[cancel operation] cancels a long-running operation. Note that the call may return before the operation has finished.</p><ul class="tabs" id="tab-cancel" data-tabs=""><li><li class="tabs-title is-active"><a href="#defn-cancel" aria-selected="true">Definition</a></li></li><li><li class="tabs-title"><a href="#ocaml-cancel">OCaml example</a></li></li><li><li class="tabs-title"><a href="#python-cancel">Python example</a></li></li></ul><div class="tabs-content" data-tabs-content="tab-cancel"><div class="tabs-panel is-active" id="defn-cancel"><table width="100%"><thead><tr><th>Name</th><th>Direction</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>dbg</code></td><td>in</td><td><code>string</code></td><td>Debug context from the caller</td></tr><tr><td><code>operation</code></td><td>in</td><td><code>variant { ... }</code></td><td>The primary key for referring to a long-running operation</td></tr><tr><td><code>unit</code></td><td>out</td><td><code>unit</code></td><td>Unit</td></tr></tbody></table></div><div class="tabs-panel" id="ocaml-cancel"><h4>Client:</h4><h4>Server:</h4></div><div class="tabs-panel" id="python-cancel"><h4>Client:</h4><pre class="prettyprint lang-py">
+import xmlrpclib
+import xapi
+from storage import *
 
-<span style="color:green">module</span> <span style="color:#0033cc">Client</span> = <span style="color:#0033cc">Datapath_client</span>(<span style="color:#990099">struct</span>
-    <span style="color:#cc9900">include</span> <span style="color:#0033cc">Lwt</span>
-    <span style="color:green">let</span> rpc call = return (<span style="color:#0033cc">Rpc_client</span>.do_rpc ~content_type:<span style="color:#0033cc">`</span><span style="color:#0033cc">XML</span> ~path:<span style="color:#aa4444">&quot;/&quot;</span> ~host:<span style="color:#aa4444">&quot;127.0.0.1&quot;</span> ~port:80 call) <span style="color:#990000">(* TODO: Rpc_client needs to support Lwt *)</span>
-<span style="color:#990099">end</span>)
+if __name__ == &quot;__main__&quot;:
+    c = xapi.connect()
+    results = c.Data.cancel({ dbg: &quot;string&quot;, operation: None })
+    print (repr(results))</pre><h4>Server:</h4><pre class="prettyprint lang-py">
+import xmlrpclib
+import xapi
+from storage import *
 
-<span style="color:green">let</span> result = <span style="color:#0033cc">Client</span>._open ~dbg:<span style="color:#aa4444">&quot;string&quot;</span> ~uri:<span style="color:#aa4444">&quot;string&quot;</span> ~persistent:true;;</pre>
+class Data_myimplementation(Data_skeleton):
+    # by default each method will return a Not_implemented error
+    # ...
+    def cancel(self, dbg, operation):
+        &quot;&quot;&quot;This interface is used for long-running data operations such as copying the contents of volumes or mirroring volumes to remote destinations&quot;&quot;&quot;
+        result = {}
+        return result
+    # ...</pre></div></div><h3 id="a-Data-destroy">destroy</h3><p>[destroy operation] destroys the information about a long-running operation. This should fail when run against an operation that is still in progress.</p><ul class="tabs" id="tab-destroy" data-tabs=""><li><li class="tabs-title is-active"><a href="#defn-destroy" aria-selected="true">Definition</a></li></li><li><li class="tabs-title"><a href="#ocaml-destroy">OCaml example</a></li></li><li><li class="tabs-title"><a href="#python-destroy">Python example</a></li></li></ul><div class="tabs-content" data-tabs-content="tab-destroy"><div class="tabs-panel is-active" id="defn-destroy"><table width="100%"><thead><tr><th>Name</th><th>Direction</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>dbg</code></td><td>in</td><td><code>string</code></td><td>Debug context from the caller</td></tr><tr><td><code>operation</code></td><td>in</td><td><code>variant { ... }</code></td><td>The primary key for referring to a long-running operation</td></tr><tr><td><code>unit</code></td><td>out</td><td><code>unit</code></td><td>Unit</td></tr></tbody></table></div><div class="tabs-panel" id="ocaml-destroy"><h4>Client:</h4><h4>Server:</h4></div><div class="tabs-panel" id="python-destroy"><h4>Client:</h4><pre class="prettyprint lang-py">
+import xmlrpclib
+import xapi
+from storage import *
 
+if __name__ == &quot;__main__&quot;:
+    c = xapi.connect()
+    results = c.Data.destroy({ dbg: &quot;string&quot;, operation: None })
+    print (repr(results))</pre><h4>Server:</h4><pre class="prettyprint lang-py">
+import xmlrpclib
+import xapi
+from storage import *
 
-        <h4>Server</h4>
-        
-<pre>
-<span style="color:#990000">(* this line only needed in a toplevel: *)</span>
-#require <span style="color:#aa4444">&quot;xcp-api-client&quot;</span>;;
+class Data_myimplementation(Data_skeleton):
+    # by default each method will return a Not_implemented error
+    # ...
+    def destroy(self, dbg, operation):
+        &quot;&quot;&quot;This interface is used for long-running data operations such as copying the contents of volumes or mirroring volumes to remote destinations&quot;&quot;&quot;
+        result = {}
+        return result
+    # ...</pre></div></div><h3 id="a-Data-list">list</h3><p>[list] returns a list of all current operations</p><ul class="tabs" id="tab-list" data-tabs=""><li><li class="tabs-title is-active"><a href="#defn-list" aria-selected="true">Definition</a></li></li><li><li class="tabs-title"><a href="#ocaml-list">OCaml example</a></li></li><li><li class="tabs-title"><a href="#python-list">Python example</a></li></li></ul><div class="tabs-content" data-tabs-content="tab-list"><div class="tabs-panel is-active" id="defn-list"><table width="100%"><thead><tr><th>Name</th><th>Direction</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>dbg</code></td><td>in</td><td><code>string</code></td><td>Debug context from the caller</td></tr><tr><td><code>unit</code></td><td>in</td><td><code>unit</code></td><td>Unit</td></tr><tr><td><code>operations</code></td><td>out</td><td><code>variant { ... } list</code></td><td>A list of operations</td></tr></tbody></table></div><div class="tabs-panel" id="ocaml-list"><h4>Client:</h4><h4>Server:</h4></div><div class="tabs-panel" id="python-list"><h4>Client:</h4><pre class="prettyprint lang-py">
+import xmlrpclib
+import xapi
+from storage import *
 
-<span style="color:#cc9900">open</span> <span style="color:#0033cc">S</span>
-<span style="color:#cc9900">open</span> <span style="color:#0033cc">Datapath</span>
+if __name__ == &quot;__main__&quot;:
+    c = xapi.connect()
+    results = c.Data.list({ dbg: &quot;string&quot;, unit: None })
+    print (repr(results))</pre><h4>Server:</h4><pre class="prettyprint lang-py">
+import xmlrpclib
+import xapi
+from storage import *
 
-<span style="color:green">module</span> <span style="color:#0033cc">Datapath_myimplementation</span> = <span style="color:green">functor</span>(<span style="color:#0033cc">M</span>: <span style="color:#0033cc">M</span>) -&gt; <span style="color:#990099">struct</span>
-    <span style="color:#990000">(* by default every operation will return a 'not implemented' exception *)</span>
-    <span style="color:#cc9900">include</span> <span style="color:#0033cc">Datapath_skeleton</span>(<span style="color:#0033cc">M</span>)
-    <span style="color:#990000">(* ... *)</span>
-    <span style="color:green">let</span> _open x =
-        <span style="color:green">let</span> <span style="color:#cc9900">open</span> <span style="color:#0033cc">Types</span>.<span style="color:#0033cc">Datapath</span>.<span style="color:#0033cc">Open</span> <span style="color:green">in</span>
-        <span style="color:green">let</span> <span style="color:#cc9900">open</span> <span style="color:#0033cc">Types</span> <span style="color:green">in</span>
-        return (<span style="color:#0033cc">`</span><span style="color:#0033cc">Ok</span> ())
-    <span style="color:#990000">(* ... *)</span>
-<span style="color:#990099">end</span></pre>
-
-
-      </div>
-      <div class="tabs-panel" id="python-open">
-        <h4>Client</h4>
-        <pre class="prettyprint lang-py">
-        
+class Data_myimplementation(Data_skeleton):
+    # by default each method will return a Not_implemented error
+    # ...
+    def list(self, dbg):
+        &quot;&quot;&quot;This interface is used for long-running data operations such as copying the contents of volumes or mirroring volumes to remote destinations&quot;&quot;&quot;
+        result = {}
+        result[&quot;operations&quot;] = [ None, None ]
+        return result
+    # ...</pre></div></div><h2 id="a-Datapath">Datapath</h2><p>Xapi will call the functions here on VM start/shutdown/suspend/resume/migrate. Every function is idempotent. Every function takes a domain parameter which allows the implementation to track how many domains are currently using the volume.</p><h3 id="a-Datapath-open">open</h3><p>[open uri persistent] is called before a disk is attached to a VM. If persistent is true then care should be taken to persist all writes to the disk. If persistent is false then the implementation should configure a temporary location for writes so they can be thrown away on [close].</p><ul class="tabs" id="tab-open" data-tabs=""><li><li class="tabs-title is-active"><a href="#defn-open" aria-selected="true">Definition</a></li></li><li><li class="tabs-title"><a href="#ocaml-open">OCaml example</a></li></li><li><li class="tabs-title"><a href="#python-open">Python example</a></li></li></ul><div class="tabs-content" data-tabs-content="tab-open"><div class="tabs-panel is-active" id="defn-open"><table width="100%"><thead><tr><th>Name</th><th>Direction</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>dbg</code></td><td>in</td><td><code>string</code></td><td>Debug context from the caller</td></tr><tr><td><code>uri</code></td><td>in</td><td><code>string</code></td><td>A URI which represents how to access the volume disk data.</td></tr><tr><td><code>persistent</code></td><td>in</td><td><code>bool</code></td><td>True means the disk data is persistent and should be preserved when the datapath is closed i.e. when a VM is shutdown or rebooted. False means the data should be thrown away when the VM is shutdown or rebooted.</td></tr><tr><td><code>unit</code></td><td>out</td><td><code>unit</code></td><td>Unit</td></tr></tbody></table></div><div class="tabs-panel" id="ocaml-open"><h4>Client:</h4><h4>Server:</h4></div><div class="tabs-panel" id="python-open"><h4>Client:</h4><pre class="prettyprint lang-py">
 import xmlrpclib
 import xapi
 from storage import *
@@ -282,11 +144,7 @@ from storage import *
 if __name__ == &quot;__main__&quot;:
     c = xapi.connect()
     results = c.Datapath.open({ dbg: &quot;string&quot;, uri: &quot;string&quot;, persistent: True })
-    print (repr(results))
-        </pre>
-        <h4>Server</h4>
-        <pre class="prettyprint lang-py">
-        
+    print (repr(results))</pre><h4>Server:</h4><pre class="prettyprint lang-py">
 import xmlrpclib
 import xapi
 from storage import *
@@ -298,114 +156,7 @@ class Datapath_myimplementation(Datapath_skeleton):
         &quot;&quot;&quot;Xapi will call the functions here on VM start/shutdown/suspend/resume/migrate. Every function is idempotent. Every function takes a domain parameter which allows the implementation to track how many domains are currently using the volume.&quot;&quot;&quot;
         result = {}
         return result
-    # ...
-        </pre>
-      </div>
-    </div>
-  
-  
-    <h3 id="a-Datapath-attach">attach</h3>
-    <p>[attach uri domain] prepares a connection between the storage named by [uri] and the Xen domain with id [domain]. The return value is the information needed by the Xen toolstack to setup the shared-memory blkfront protocol. Note that the same volume may be simultaneously attached to multiple hosts for example over a migrate. If an implementation needs to perform an explicit handover, then it should implement [activate] and [deactivate]. This function is idempotent.</p>
-    
-    <ul class="tabs" data-tabs="" id="tab-attach">
-     <li class="tabs-title is-active"><a href="#defn-attach" aria-selected="true">Definition</a></li>
-     <li class="tabs-title"><a href="#ocaml-attach">OCaml example</a></li>
-     <li class="tabs-title"><a href="#python-attach">Python example</a></li>
-    </ul>
-    <div class="tabs-content" data-tabs-content="tab-attach">
-      <div class="tabs-panel is-active" id="defn-attach">
-        
-  <table width="100%">
-  <thead>
-    <tr>
-      <th>Name</th>
-      <th>Direction</th>
-      <th>Type</th>
-      <th>Description</th>
-    </tr>
-  </thead>
-  <tbody>
-    
-    <tr>
-      <td><code>dbg</code></td>
-      <td>in</td>
-      <td><code> <a href="#a-14">debug_info</a> </code></td>
-      <td>Debug context from the caller</td>
-    </tr>
-  
-    <tr>
-      <td><code>uri</code></td>
-      <td>in</td>
-      <td><code> <a href="#a-16">uri</a> </code></td>
-      <td>A URI which represents how to access the volume disk data.</td>
-    </tr>
-  
-    <tr>
-      <td><code>domain</code></td>
-      <td>in</td>
-      <td><code> <a href="#a-15">domain</a> </code></td>
-      <td>An opaque string which represents the Xen domain.</td>
-    </tr>
-  
-    <tr>
-      <td><code>backend</code></td>
-      <td>out</td>
-      <td><code> <a href="#a-18">backend</a> </code></td>
-      <td>The Xen block backend configuration.</td>
-    </tr>
-  
-  </tbody>
-  </table>
-  
-      </div>
-      <div class="tabs-panel" id="ocaml-attach">
-        <h4>Client</h4>
-        
-<pre>
-<span style="color:#990000">(* these directives only needed in a toplevel: *)</span>
-#require <span style="color:#aa4444">&quot;xcp-api-client&quot;</span>;;
-#require <span style="color:#aa4444">&quot;lwt&quot;</span>;;
-#require <span style="color:#aa4444">&quot;lwt.syntax&quot;</span>;;
-#require <span style="color:#aa4444">&quot;rpc.unix&quot;</span>;;
-
-<span style="color:#cc9900">open</span> <span style="color:#0033cc">S</span>
-<span style="color:#cc9900">open</span> <span style="color:#0033cc">Datapath</span>
-<span style="color:#cc9900">open</span> <span style="color:#0033cc">Types</span>
-
-<span style="color:green">module</span> <span style="color:#0033cc">Client</span> = <span style="color:#0033cc">Datapath_client</span>(<span style="color:#990099">struct</span>
-    <span style="color:#cc9900">include</span> <span style="color:#0033cc">Lwt</span>
-    <span style="color:green">let</span> rpc call = return (<span style="color:#0033cc">Rpc_client</span>.do_rpc ~content_type:<span style="color:#0033cc">`</span><span style="color:#0033cc">XML</span> ~path:<span style="color:#aa4444">&quot;/&quot;</span> ~host:<span style="color:#aa4444">&quot;127.0.0.1&quot;</span> ~port:80 call) <span style="color:#990000">(* TODO: Rpc_client needs to support Lwt *)</span>
-<span style="color:#990099">end</span>)
-
-<span style="color:green">let</span> result = <span style="color:#0033cc">Client</span>.attach ~dbg:<span style="color:#aa4444">&quot;string&quot;</span> ~uri:<span style="color:#aa4444">&quot;string&quot;</span> ~domain:<span style="color:#aa4444">&quot;string&quot;</span>;;</pre>
-
-
-        <h4>Server</h4>
-        
-<pre>
-<span style="color:#990000">(* this line only needed in a toplevel: *)</span>
-#require <span style="color:#aa4444">&quot;xcp-api-client&quot;</span>;;
-
-<span style="color:#cc9900">open</span> <span style="color:#0033cc">S</span>
-<span style="color:#cc9900">open</span> <span style="color:#0033cc">Datapath</span>
-
-<span style="color:green">module</span> <span style="color:#0033cc">Datapath_myimplementation</span> = <span style="color:green">functor</span>(<span style="color:#0033cc">M</span>: <span style="color:#0033cc">M</span>) -&gt; <span style="color:#990099">struct</span>
-    <span style="color:#990000">(* by default every operation will return a 'not implemented' exception *)</span>
-    <span style="color:#cc9900">include</span> <span style="color:#0033cc">Datapath_skeleton</span>(<span style="color:#0033cc">M</span>)
-    <span style="color:#990000">(* ... *)</span>
-    <span style="color:green">let</span> attach x =
-        <span style="color:green">let</span> <span style="color:#cc9900">open</span> <span style="color:#0033cc">Types</span>.<span style="color:#0033cc">Datapath</span>.<span style="color:#0033cc">Attach</span> <span style="color:green">in</span>
-        <span style="color:green">let</span> <span style="color:#cc9900">open</span> <span style="color:#0033cc">Types</span> <span style="color:green">in</span>
-        return (<span style="color:#0033cc">`</span><span style="color:#0033cc">Ok</span> (<span style="color:#0033cc">Out</span>.({ domain_uuid = <span style="color:#aa4444">&quot;string&quot;</span>; implementation = <span style="color:#0033cc">Blkback</span> <span style="color:#aa4444">&quot;string&quot;</span> })))
-    <span style="color:#990000">(* ... *)</span>
-<span style="color:#990099">end</span></pre>
-
-
-      </div>
-      <div class="tabs-panel" id="python-attach">
-        <h4>Client</h4>
-        <pre class="prettyprint lang-py">
-        
+    # ...</pre></div></div><h3 id="a-Datapath-attach">attach</h3><p>[attach uri domain] prepares a connection between the storage named by [uri] and the Xen domain with id [domain]. The return value is the information needed by the Xen toolstack to setup the shared-memory blkfront protocol. Note that the same volume may be simultaneously attached to multiple hosts for example over a migrate. If an implementation needs to perform an explicit handover, then it should implement [activate] and [deactivate]. This function is idempotent.</p><ul class="tabs" id="tab-attach" data-tabs=""><li><li class="tabs-title is-active"><a href="#defn-attach" aria-selected="true">Definition</a></li></li><li><li class="tabs-title"><a href="#ocaml-attach">OCaml example</a></li></li><li><li class="tabs-title"><a href="#python-attach">Python example</a></li></li></ul><div class="tabs-content" data-tabs-content="tab-attach"><div class="tabs-panel is-active" id="defn-attach"><table width="100%"><thead><tr><th>Name</th><th>Direction</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>dbg</code></td><td>in</td><td><code>string</code></td><td>Debug context from the caller</td></tr><tr><td><code>uri</code></td><td>in</td><td><code>string</code></td><td>A URI which represents how to access the volume disk data.</td></tr><tr><td><code>domain</code></td><td>in</td><td><code>string</code></td><td>An opaque string which represents the Xen domain.</td></tr><tr><td><code>backend</code></td><td>out</td><td><code>struct  { ... }</code></td><td>A description of which Xen block backend to use. The toolstack needs this to setup the shared memory connection to blkfront in the VM.</td></tr></tbody></table></div><div class="tabs-panel" id="ocaml-attach"><h4>Client:</h4><h4>Server:</h4></div><div class="tabs-panel" id="python-attach"><h4>Client:</h4><pre class="prettyprint lang-py">
 import xmlrpclib
 import xapi
 from storage import *
@@ -413,11 +164,7 @@ from storage import *
 if __name__ == &quot;__main__&quot;:
     c = xapi.connect()
     results = c.Datapath.attach({ dbg: &quot;string&quot;, uri: &quot;string&quot;, domain: &quot;string&quot; })
-    print (repr(results))
-        </pre>
-        <h4>Server</h4>
-        <pre class="prettyprint lang-py">
-        
+    print (repr(results))</pre><h4>Server:</h4><pre class="prettyprint lang-py">
 import xmlrpclib
 import xapi
 from storage import *
@@ -430,107 +177,7 @@ class Datapath_myimplementation(Datapath_skeleton):
         result = {}
         result[&quot;backend&quot;] = { &quot;domain_uuid&quot;: &quot;string&quot;, &quot;implementation&quot;: None }
         return result
-    # ...
-        </pre>
-      </div>
-    </div>
-  
-  
-    <h3 id="a-Datapath-activate">activate</h3>
-    <p>[activate uri domain] is called just before a VM needs to read or write its disk. This is an opportunity for an implementation which needs to perform an explicit volume handover to do it. This function is called in the migration downtime window so delays here will be noticeable to users and should be minimised. This function is idempotent.</p>
-    
-    <ul class="tabs" data-tabs="" id="tab-activate">
-     <li class="tabs-title is-active"><a href="#defn-activate" aria-selected="true">Definition</a></li>
-     <li class="tabs-title"><a href="#ocaml-activate">OCaml example</a></li>
-     <li class="tabs-title"><a href="#python-activate">Python example</a></li>
-    </ul>
-    <div class="tabs-content" data-tabs-content="tab-activate">
-      <div class="tabs-panel is-active" id="defn-activate">
-        
-  <table width="100%">
-  <thead>
-    <tr>
-      <th>Name</th>
-      <th>Direction</th>
-      <th>Type</th>
-      <th>Description</th>
-    </tr>
-  </thead>
-  <tbody>
-    
-    <tr>
-      <td><code>dbg</code></td>
-      <td>in</td>
-      <td><code> <a href="#a-14">debug_info</a> </code></td>
-      <td>Debug context from the caller</td>
-    </tr>
-  
-    <tr>
-      <td><code>uri</code></td>
-      <td>in</td>
-      <td><code> <a href="#a-16">uri</a> </code></td>
-      <td>A URI which represents how to access the volume disk data.</td>
-    </tr>
-  
-    <tr>
-      <td><code>domain</code></td>
-      <td>in</td>
-      <td><code> <a href="#a-15">domain</a> </code></td>
-      <td>An opaque string which represents the Xen domain.</td>
-    </tr>
-  
-  </tbody>
-  </table>
-  
-      </div>
-      <div class="tabs-panel" id="ocaml-activate">
-        <h4>Client</h4>
-        
-<pre>
-<span style="color:#990000">(* these directives only needed in a toplevel: *)</span>
-#require <span style="color:#aa4444">&quot;xcp-api-client&quot;</span>;;
-#require <span style="color:#aa4444">&quot;lwt&quot;</span>;;
-#require <span style="color:#aa4444">&quot;lwt.syntax&quot;</span>;;
-#require <span style="color:#aa4444">&quot;rpc.unix&quot;</span>;;
-
-<span style="color:#cc9900">open</span> <span style="color:#0033cc">S</span>
-<span style="color:#cc9900">open</span> <span style="color:#0033cc">Datapath</span>
-<span style="color:#cc9900">open</span> <span style="color:#0033cc">Types</span>
-
-<span style="color:green">module</span> <span style="color:#0033cc">Client</span> = <span style="color:#0033cc">Datapath_client</span>(<span style="color:#990099">struct</span>
-    <span style="color:#cc9900">include</span> <span style="color:#0033cc">Lwt</span>
-    <span style="color:green">let</span> rpc call = return (<span style="color:#0033cc">Rpc_client</span>.do_rpc ~content_type:<span style="color:#0033cc">`</span><span style="color:#0033cc">XML</span> ~path:<span style="color:#aa4444">&quot;/&quot;</span> ~host:<span style="color:#aa4444">&quot;127.0.0.1&quot;</span> ~port:80 call) <span style="color:#990000">(* TODO: Rpc_client needs to support Lwt *)</span>
-<span style="color:#990099">end</span>)
-
-<span style="color:green">let</span> result = <span style="color:#0033cc">Client</span>.activate ~dbg:<span style="color:#aa4444">&quot;string&quot;</span> ~uri:<span style="color:#aa4444">&quot;string&quot;</span> ~domain:<span style="color:#aa4444">&quot;string&quot;</span>;;</pre>
-
-
-        <h4>Server</h4>
-        
-<pre>
-<span style="color:#990000">(* this line only needed in a toplevel: *)</span>
-#require <span style="color:#aa4444">&quot;xcp-api-client&quot;</span>;;
-
-<span style="color:#cc9900">open</span> <span style="color:#0033cc">S</span>
-<span style="color:#cc9900">open</span> <span style="color:#0033cc">Datapath</span>
-
-<span style="color:green">module</span> <span style="color:#0033cc">Datapath_myimplementation</span> = <span style="color:green">functor</span>(<span style="color:#0033cc">M</span>: <span style="color:#0033cc">M</span>) -&gt; <span style="color:#990099">struct</span>
-    <span style="color:#990000">(* by default every operation will return a 'not implemented' exception *)</span>
-    <span style="color:#cc9900">include</span> <span style="color:#0033cc">Datapath_skeleton</span>(<span style="color:#0033cc">M</span>)
-    <span style="color:#990000">(* ... *)</span>
-    <span style="color:green">let</span> activate x =
-        <span style="color:green">let</span> <span style="color:#cc9900">open</span> <span style="color:#0033cc">Types</span>.<span style="color:#0033cc">Datapath</span>.<span style="color:#0033cc">Activate</span> <span style="color:green">in</span>
-        <span style="color:green">let</span> <span style="color:#cc9900">open</span> <span style="color:#0033cc">Types</span> <span style="color:green">in</span>
-        return (<span style="color:#0033cc">`</span><span style="color:#0033cc">Ok</span> ())
-    <span style="color:#990000">(* ... *)</span>
-<span style="color:#990099">end</span></pre>
-
-
-      </div>
-      <div class="tabs-panel" id="python-activate">
-        <h4>Client</h4>
-        <pre class="prettyprint lang-py">
-        
+    # ...</pre></div></div><h3 id="a-Datapath-activate">activate</h3><p>[activate uri domain] is called just before a VM needs to read or write its disk. This is an opportunity for an implementation which needs to perform an explicit volume handover to do it. This function is called in the migration downtime window so delays here will be noticeable to users and should be minimised. This function is idempotent.</p><ul class="tabs" id="tab-activate" data-tabs=""><li><li class="tabs-title is-active"><a href="#defn-activate" aria-selected="true">Definition</a></li></li><li><li class="tabs-title"><a href="#ocaml-activate">OCaml example</a></li></li><li><li class="tabs-title"><a href="#python-activate">Python example</a></li></li></ul><div class="tabs-content" data-tabs-content="tab-activate"><div class="tabs-panel is-active" id="defn-activate"><table width="100%"><thead><tr><th>Name</th><th>Direction</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>dbg</code></td><td>in</td><td><code>string</code></td><td>Debug context from the caller</td></tr><tr><td><code>uri</code></td><td>in</td><td><code>string</code></td><td>A URI which represents how to access the volume disk data.</td></tr><tr><td><code>domain</code></td><td>in</td><td><code>string</code></td><td>An opaque string which represents the Xen domain.</td></tr><tr><td><code>unit</code></td><td>out</td><td><code>unit</code></td><td>Unit</td></tr></tbody></table></div><div class="tabs-panel" id="ocaml-activate"><h4>Client:</h4><h4>Server:</h4></div><div class="tabs-panel" id="python-activate"><h4>Client:</h4><pre class="prettyprint lang-py">
 import xmlrpclib
 import xapi
 from storage import *
@@ -538,11 +185,7 @@ from storage import *
 if __name__ == &quot;__main__&quot;:
     c = xapi.connect()
     results = c.Datapath.activate({ dbg: &quot;string&quot;, uri: &quot;string&quot;, domain: &quot;string&quot; })
-    print (repr(results))
-        </pre>
-        <h4>Server</h4>
-        <pre class="prettyprint lang-py">
-        
+    print (repr(results))</pre><h4>Server:</h4><pre class="prettyprint lang-py">
 import xmlrpclib
 import xapi
 from storage import *
@@ -554,107 +197,7 @@ class Datapath_myimplementation(Datapath_skeleton):
         &quot;&quot;&quot;Xapi will call the functions here on VM start/shutdown/suspend/resume/migrate. Every function is idempotent. Every function takes a domain parameter which allows the implementation to track how many domains are currently using the volume.&quot;&quot;&quot;
         result = {}
         return result
-    # ...
-        </pre>
-      </div>
-    </div>
-  
-  
-    <h3 id="a-Datapath-deactivate">deactivate</h3>
-    <p>[deactivate uri domain] is called as soon as a VM has finished reading or writing its disk. This is an opportunity for an implementation which needs to perform an explicit volume handover to do it. This function is called in the migration downtime window so delays here will be noticeable to users and should be minimised. This function is idempotent.</p>
-    
-    <ul class="tabs" data-tabs="" id="tab-deactivate">
-     <li class="tabs-title is-active"><a href="#defn-deactivate" aria-selected="true">Definition</a></li>
-     <li class="tabs-title"><a href="#ocaml-deactivate">OCaml example</a></li>
-     <li class="tabs-title"><a href="#python-deactivate">Python example</a></li>
-    </ul>
-    <div class="tabs-content" data-tabs-content="tab-deactivate">
-      <div class="tabs-panel is-active" id="defn-deactivate">
-        
-  <table width="100%">
-  <thead>
-    <tr>
-      <th>Name</th>
-      <th>Direction</th>
-      <th>Type</th>
-      <th>Description</th>
-    </tr>
-  </thead>
-  <tbody>
-    
-    <tr>
-      <td><code>dbg</code></td>
-      <td>in</td>
-      <td><code> <a href="#a-14">debug_info</a> </code></td>
-      <td>Debug context from the caller</td>
-    </tr>
-  
-    <tr>
-      <td><code>uri</code></td>
-      <td>in</td>
-      <td><code> <a href="#a-16">uri</a> </code></td>
-      <td>A URI which represents how to access the volume disk data.</td>
-    </tr>
-  
-    <tr>
-      <td><code>domain</code></td>
-      <td>in</td>
-      <td><code> <a href="#a-15">domain</a> </code></td>
-      <td>An opaque string which represents the Xen domain.</td>
-    </tr>
-  
-  </tbody>
-  </table>
-  
-      </div>
-      <div class="tabs-panel" id="ocaml-deactivate">
-        <h4>Client</h4>
-        
-<pre>
-<span style="color:#990000">(* these directives only needed in a toplevel: *)</span>
-#require <span style="color:#aa4444">&quot;xcp-api-client&quot;</span>;;
-#require <span style="color:#aa4444">&quot;lwt&quot;</span>;;
-#require <span style="color:#aa4444">&quot;lwt.syntax&quot;</span>;;
-#require <span style="color:#aa4444">&quot;rpc.unix&quot;</span>;;
-
-<span style="color:#cc9900">open</span> <span style="color:#0033cc">S</span>
-<span style="color:#cc9900">open</span> <span style="color:#0033cc">Datapath</span>
-<span style="color:#cc9900">open</span> <span style="color:#0033cc">Types</span>
-
-<span style="color:green">module</span> <span style="color:#0033cc">Client</span> = <span style="color:#0033cc">Datapath_client</span>(<span style="color:#990099">struct</span>
-    <span style="color:#cc9900">include</span> <span style="color:#0033cc">Lwt</span>
-    <span style="color:green">let</span> rpc call = return (<span style="color:#0033cc">Rpc_client</span>.do_rpc ~content_type:<span style="color:#0033cc">`</span><span style="color:#0033cc">XML</span> ~path:<span style="color:#aa4444">&quot;/&quot;</span> ~host:<span style="color:#aa4444">&quot;127.0.0.1&quot;</span> ~port:80 call) <span style="color:#990000">(* TODO: Rpc_client needs to support Lwt *)</span>
-<span style="color:#990099">end</span>)
-
-<span style="color:green">let</span> result = <span style="color:#0033cc">Client</span>.deactivate ~dbg:<span style="color:#aa4444">&quot;string&quot;</span> ~uri:<span style="color:#aa4444">&quot;string&quot;</span> ~domain:<span style="color:#aa4444">&quot;string&quot;</span>;;</pre>
-
-
-        <h4>Server</h4>
-        
-<pre>
-<span style="color:#990000">(* this line only needed in a toplevel: *)</span>
-#require <span style="color:#aa4444">&quot;xcp-api-client&quot;</span>;;
-
-<span style="color:#cc9900">open</span> <span style="color:#0033cc">S</span>
-<span style="color:#cc9900">open</span> <span style="color:#0033cc">Datapath</span>
-
-<span style="color:green">module</span> <span style="color:#0033cc">Datapath_myimplementation</span> = <span style="color:green">functor</span>(<span style="color:#0033cc">M</span>: <span style="color:#0033cc">M</span>) -&gt; <span style="color:#990099">struct</span>
-    <span style="color:#990000">(* by default every operation will return a 'not implemented' exception *)</span>
-    <span style="color:#cc9900">include</span> <span style="color:#0033cc">Datapath_skeleton</span>(<span style="color:#0033cc">M</span>)
-    <span style="color:#990000">(* ... *)</span>
-    <span style="color:green">let</span> deactivate x =
-        <span style="color:green">let</span> <span style="color:#cc9900">open</span> <span style="color:#0033cc">Types</span>.<span style="color:#0033cc">Datapath</span>.<span style="color:#0033cc">Deactivate</span> <span style="color:green">in</span>
-        <span style="color:green">let</span> <span style="color:#cc9900">open</span> <span style="color:#0033cc">Types</span> <span style="color:green">in</span>
-        return (<span style="color:#0033cc">`</span><span style="color:#0033cc">Ok</span> ())
-    <span style="color:#990000">(* ... *)</span>
-<span style="color:#990099">end</span></pre>
-
-
-      </div>
-      <div class="tabs-panel" id="python-deactivate">
-        <h4>Client</h4>
-        <pre class="prettyprint lang-py">
-        
+    # ...</pre></div></div><h3 id="a-Datapath-deactivate">deactivate</h3><p>[deactivate uri domain] is called as soon as a VM has finished reading or writing its disk. This is an opportunity for an implementation which needs to perform an explicit volume handover to do it. This function is called in the migration downtime window so delays here will be noticeable to users and should be minimised. This function is idempotent.</p><ul class="tabs" id="tab-deactivate" data-tabs=""><li><li class="tabs-title is-active"><a href="#defn-deactivate" aria-selected="true">Definition</a></li></li><li><li class="tabs-title"><a href="#ocaml-deactivate">OCaml example</a></li></li><li><li class="tabs-title"><a href="#python-deactivate">Python example</a></li></li></ul><div class="tabs-content" data-tabs-content="tab-deactivate"><div class="tabs-panel is-active" id="defn-deactivate"><table width="100%"><thead><tr><th>Name</th><th>Direction</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>dbg</code></td><td>in</td><td><code>string</code></td><td>Debug context from the caller</td></tr><tr><td><code>uri</code></td><td>in</td><td><code>string</code></td><td>A URI which represents how to access the volume disk data.</td></tr><tr><td><code>domain</code></td><td>in</td><td><code>string</code></td><td>An opaque string which represents the Xen domain.</td></tr><tr><td><code>unit</code></td><td>out</td><td><code>unit</code></td><td>Unit</td></tr></tbody></table></div><div class="tabs-panel" id="ocaml-deactivate"><h4>Client:</h4><h4>Server:</h4></div><div class="tabs-panel" id="python-deactivate"><h4>Client:</h4><pre class="prettyprint lang-py">
 import xmlrpclib
 import xapi
 from storage import *
@@ -662,11 +205,7 @@ from storage import *
 if __name__ == &quot;__main__&quot;:
     c = xapi.connect()
     results = c.Datapath.deactivate({ dbg: &quot;string&quot;, uri: &quot;string&quot;, domain: &quot;string&quot; })
-    print (repr(results))
-        </pre>
-        <h4>Server</h4>
-        <pre class="prettyprint lang-py">
-        
+    print (repr(results))</pre><h4>Server:</h4><pre class="prettyprint lang-py">
 import xmlrpclib
 import xapi
 from storage import *
@@ -678,107 +217,7 @@ class Datapath_myimplementation(Datapath_skeleton):
         &quot;&quot;&quot;Xapi will call the functions here on VM start/shutdown/suspend/resume/migrate. Every function is idempotent. Every function takes a domain parameter which allows the implementation to track how many domains are currently using the volume.&quot;&quot;&quot;
         result = {}
         return result
-    # ...
-        </pre>
-      </div>
-    </div>
-  
-  
-    <h3 id="a-Datapath-detach">detach</h3>
-    <p>[detach uri domain] is called sometime after a VM has finished reading or writing its disk. This is an opportunity to clean up any resources associated with the disk. This function is called outside the migration downtime window so can be slow without affecting users. This function is idempotent. This function should never fail. If an implementation is unable to perform some cleanup right away then it should queue the action internally. Any error result represents a bug in the implementation.</p>
-    
-    <ul class="tabs" data-tabs="" id="tab-detach">
-     <li class="tabs-title is-active"><a href="#defn-detach" aria-selected="true">Definition</a></li>
-     <li class="tabs-title"><a href="#ocaml-detach">OCaml example</a></li>
-     <li class="tabs-title"><a href="#python-detach">Python example</a></li>
-    </ul>
-    <div class="tabs-content" data-tabs-content="tab-detach">
-      <div class="tabs-panel is-active" id="defn-detach">
-        
-  <table width="100%">
-  <thead>
-    <tr>
-      <th>Name</th>
-      <th>Direction</th>
-      <th>Type</th>
-      <th>Description</th>
-    </tr>
-  </thead>
-  <tbody>
-    
-    <tr>
-      <td><code>dbg</code></td>
-      <td>in</td>
-      <td><code> <a href="#a-14">debug_info</a> </code></td>
-      <td>Debug context from the caller</td>
-    </tr>
-  
-    <tr>
-      <td><code>uri</code></td>
-      <td>in</td>
-      <td><code> <a href="#a-16">uri</a> </code></td>
-      <td>A URI which represents how to access the volume disk data.</td>
-    </tr>
-  
-    <tr>
-      <td><code>domain</code></td>
-      <td>in</td>
-      <td><code> <a href="#a-15">domain</a> </code></td>
-      <td>An opaque string which represents the Xen domain.</td>
-    </tr>
-  
-  </tbody>
-  </table>
-  
-      </div>
-      <div class="tabs-panel" id="ocaml-detach">
-        <h4>Client</h4>
-        
-<pre>
-<span style="color:#990000">(* these directives only needed in a toplevel: *)</span>
-#require <span style="color:#aa4444">&quot;xcp-api-client&quot;</span>;;
-#require <span style="color:#aa4444">&quot;lwt&quot;</span>;;
-#require <span style="color:#aa4444">&quot;lwt.syntax&quot;</span>;;
-#require <span style="color:#aa4444">&quot;rpc.unix&quot;</span>;;
-
-<span style="color:#cc9900">open</span> <span style="color:#0033cc">S</span>
-<span style="color:#cc9900">open</span> <span style="color:#0033cc">Datapath</span>
-<span style="color:#cc9900">open</span> <span style="color:#0033cc">Types</span>
-
-<span style="color:green">module</span> <span style="color:#0033cc">Client</span> = <span style="color:#0033cc">Datapath_client</span>(<span style="color:#990099">struct</span>
-    <span style="color:#cc9900">include</span> <span style="color:#0033cc">Lwt</span>
-    <span style="color:green">let</span> rpc call = return (<span style="color:#0033cc">Rpc_client</span>.do_rpc ~content_type:<span style="color:#0033cc">`</span><span style="color:#0033cc">XML</span> ~path:<span style="color:#aa4444">&quot;/&quot;</span> ~host:<span style="color:#aa4444">&quot;127.0.0.1&quot;</span> ~port:80 call) <span style="color:#990000">(* TODO: Rpc_client needs to support Lwt *)</span>
-<span style="color:#990099">end</span>)
-
-<span style="color:green">let</span> result = <span style="color:#0033cc">Client</span>.detach ~dbg:<span style="color:#aa4444">&quot;string&quot;</span> ~uri:<span style="color:#aa4444">&quot;string&quot;</span> ~domain:<span style="color:#aa4444">&quot;string&quot;</span>;;</pre>
-
-
-        <h4>Server</h4>
-        
-<pre>
-<span style="color:#990000">(* this line only needed in a toplevel: *)</span>
-#require <span style="color:#aa4444">&quot;xcp-api-client&quot;</span>;;
-
-<span style="color:#cc9900">open</span> <span style="color:#0033cc">S</span>
-<span style="color:#cc9900">open</span> <span style="color:#0033cc">Datapath</span>
-
-<span style="color:green">module</span> <span style="color:#0033cc">Datapath_myimplementation</span> = <span style="color:green">functor</span>(<span style="color:#0033cc">M</span>: <span style="color:#0033cc">M</span>) -&gt; <span style="color:#990099">struct</span>
-    <span style="color:#990000">(* by default every operation will return a 'not implemented' exception *)</span>
-    <span style="color:#cc9900">include</span> <span style="color:#0033cc">Datapath_skeleton</span>(<span style="color:#0033cc">M</span>)
-    <span style="color:#990000">(* ... *)</span>
-    <span style="color:green">let</span> detach x =
-        <span style="color:green">let</span> <span style="color:#cc9900">open</span> <span style="color:#0033cc">Types</span>.<span style="color:#0033cc">Datapath</span>.<span style="color:#0033cc">Detach</span> <span style="color:green">in</span>
-        <span style="color:green">let</span> <span style="color:#cc9900">open</span> <span style="color:#0033cc">Types</span> <span style="color:green">in</span>
-        return (<span style="color:#0033cc">`</span><span style="color:#0033cc">Ok</span> ())
-    <span style="color:#990000">(* ... *)</span>
-<span style="color:#990099">end</span></pre>
-
-
-      </div>
-      <div class="tabs-panel" id="python-detach">
-        <h4>Client</h4>
-        <pre class="prettyprint lang-py">
-        
+    # ...</pre></div></div><h3 id="a-Datapath-detach">detach</h3><p>[detach uri domain] is called sometime after a VM has finished reading or writing its disk. This is an opportunity to clean up any resources associated with the disk. This function is called outside the migration downtime window so can be slow without affecting users. This function is idempotent. This function should never fail. If an implementation is unable to perform some cleanup right away then it should queue the action internally. Any error result represents a bug in the implementation.</p><ul class="tabs" id="tab-detach" data-tabs=""><li><li class="tabs-title is-active"><a href="#defn-detach" aria-selected="true">Definition</a></li></li><li><li class="tabs-title"><a href="#ocaml-detach">OCaml example</a></li></li><li><li class="tabs-title"><a href="#python-detach">Python example</a></li></li></ul><div class="tabs-content" data-tabs-content="tab-detach"><div class="tabs-panel is-active" id="defn-detach"><table width="100%"><thead><tr><th>Name</th><th>Direction</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>dbg</code></td><td>in</td><td><code>string</code></td><td>Debug context from the caller</td></tr><tr><td><code>uri</code></td><td>in</td><td><code>string</code></td><td>A URI which represents how to access the volume disk data.</td></tr><tr><td><code>domain</code></td><td>in</td><td><code>string</code></td><td>An opaque string which represents the Xen domain.</td></tr><tr><td><code>unit</code></td><td>out</td><td><code>unit</code></td><td>Unit</td></tr></tbody></table></div><div class="tabs-panel" id="ocaml-detach"><h4>Client:</h4><h4>Server:</h4></div><div class="tabs-panel" id="python-detach"><h4>Client:</h4><pre class="prettyprint lang-py">
 import xmlrpclib
 import xapi
 from storage import *
@@ -786,11 +225,7 @@ from storage import *
 if __name__ == &quot;__main__&quot;:
     c = xapi.connect()
     results = c.Datapath.detach({ dbg: &quot;string&quot;, uri: &quot;string&quot;, domain: &quot;string&quot; })
-    print (repr(results))
-        </pre>
-        <h4>Server</h4>
-        <pre class="prettyprint lang-py">
-        
+    print (repr(results))</pre><h4>Server:</h4><pre class="prettyprint lang-py">
 import xmlrpclib
 import xapi
 from storage import *
@@ -802,100 +237,7 @@ class Datapath_myimplementation(Datapath_skeleton):
         &quot;&quot;&quot;Xapi will call the functions here on VM start/shutdown/suspend/resume/migrate. Every function is idempotent. Every function takes a domain parameter which allows the implementation to track how many domains are currently using the volume.&quot;&quot;&quot;
         result = {}
         return result
-    # ...
-        </pre>
-      </div>
-    </div>
-  
-  
-    <h3 id="a-Datapath-close">close</h3>
-    <p>[close uri] is called after a disk is detached and a VM shutdown. This is an opportunity to throw away writes if the disk is not persistent.</p>
-    
-    <ul class="tabs" data-tabs="" id="tab-close">
-     <li class="tabs-title is-active"><a href="#defn-close" aria-selected="true">Definition</a></li>
-     <li class="tabs-title"><a href="#ocaml-close">OCaml example</a></li>
-     <li class="tabs-title"><a href="#python-close">Python example</a></li>
-    </ul>
-    <div class="tabs-content" data-tabs-content="tab-close">
-      <div class="tabs-panel is-active" id="defn-close">
-        
-  <table width="100%">
-  <thead>
-    <tr>
-      <th>Name</th>
-      <th>Direction</th>
-      <th>Type</th>
-      <th>Description</th>
-    </tr>
-  </thead>
-  <tbody>
-    
-    <tr>
-      <td><code>dbg</code></td>
-      <td>in</td>
-      <td><code> <a href="#a-14">debug_info</a> </code></td>
-      <td>Debug context from the caller</td>
-    </tr>
-  
-    <tr>
-      <td><code>uri</code></td>
-      <td>in</td>
-      <td><code> <a href="#a-16">uri</a> </code></td>
-      <td>A URI which represents how to access the volume disk data.</td>
-    </tr>
-  
-  </tbody>
-  </table>
-  
-      </div>
-      <div class="tabs-panel" id="ocaml-close">
-        <h4>Client</h4>
-        
-<pre>
-<span style="color:#990000">(* these directives only needed in a toplevel: *)</span>
-#require <span style="color:#aa4444">&quot;xcp-api-client&quot;</span>;;
-#require <span style="color:#aa4444">&quot;lwt&quot;</span>;;
-#require <span style="color:#aa4444">&quot;lwt.syntax&quot;</span>;;
-#require <span style="color:#aa4444">&quot;rpc.unix&quot;</span>;;
-
-<span style="color:#cc9900">open</span> <span style="color:#0033cc">S</span>
-<span style="color:#cc9900">open</span> <span style="color:#0033cc">Datapath</span>
-<span style="color:#cc9900">open</span> <span style="color:#0033cc">Types</span>
-
-<span style="color:green">module</span> <span style="color:#0033cc">Client</span> = <span style="color:#0033cc">Datapath_client</span>(<span style="color:#990099">struct</span>
-    <span style="color:#cc9900">include</span> <span style="color:#0033cc">Lwt</span>
-    <span style="color:green">let</span> rpc call = return (<span style="color:#0033cc">Rpc_client</span>.do_rpc ~content_type:<span style="color:#0033cc">`</span><span style="color:#0033cc">XML</span> ~path:<span style="color:#aa4444">&quot;/&quot;</span> ~host:<span style="color:#aa4444">&quot;127.0.0.1&quot;</span> ~port:80 call) <span style="color:#990000">(* TODO: Rpc_client needs to support Lwt *)</span>
-<span style="color:#990099">end</span>)
-
-<span style="color:green">let</span> result = <span style="color:#0033cc">Client</span>.close ~dbg:<span style="color:#aa4444">&quot;string&quot;</span> ~uri:<span style="color:#aa4444">&quot;string&quot;</span>;;</pre>
-
-
-        <h4>Server</h4>
-        
-<pre>
-<span style="color:#990000">(* this line only needed in a toplevel: *)</span>
-#require <span style="color:#aa4444">&quot;xcp-api-client&quot;</span>;;
-
-<span style="color:#cc9900">open</span> <span style="color:#0033cc">S</span>
-<span style="color:#cc9900">open</span> <span style="color:#0033cc">Datapath</span>
-
-<span style="color:green">module</span> <span style="color:#0033cc">Datapath_myimplementation</span> = <span style="color:green">functor</span>(<span style="color:#0033cc">M</span>: <span style="color:#0033cc">M</span>) -&gt; <span style="color:#990099">struct</span>
-    <span style="color:#990000">(* by default every operation will return a 'not implemented' exception *)</span>
-    <span style="color:#cc9900">include</span> <span style="color:#0033cc">Datapath_skeleton</span>(<span style="color:#0033cc">M</span>)
-    <span style="color:#990000">(* ... *)</span>
-    <span style="color:green">let</span> close x =
-        <span style="color:green">let</span> <span style="color:#cc9900">open</span> <span style="color:#0033cc">Types</span>.<span style="color:#0033cc">Datapath</span>.<span style="color:#0033cc">Close</span> <span style="color:green">in</span>
-        <span style="color:green">let</span> <span style="color:#cc9900">open</span> <span style="color:#0033cc">Types</span> <span style="color:green">in</span>
-        return (<span style="color:#0033cc">`</span><span style="color:#0033cc">Ok</span> ())
-    <span style="color:#990000">(* ... *)</span>
-<span style="color:#990099">end</span></pre>
-
-
-      </div>
-      <div class="tabs-panel" id="python-close">
-        <h4>Client</h4>
-        <pre class="prettyprint lang-py">
-        
+    # ...</pre></div></div><h3 id="a-Datapath-close">close</h3><p>[close uri] is called after a disk is detached and a VM shutdown. This is an opportunity to throw away writes if the disk is not persistent.</p><ul class="tabs" id="tab-close" data-tabs=""><li><li class="tabs-title is-active"><a href="#defn-close" aria-selected="true">Definition</a></li></li><li><li class="tabs-title"><a href="#ocaml-close">OCaml example</a></li></li><li><li class="tabs-title"><a href="#python-close">Python example</a></li></li></ul><div class="tabs-content" data-tabs-content="tab-close"><div class="tabs-panel is-active" id="defn-close"><table width="100%"><thead><tr><th>Name</th><th>Direction</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>dbg</code></td><td>in</td><td><code>string</code></td><td>Debug context from the caller</td></tr><tr><td><code>uri</code></td><td>in</td><td><code>string</code></td><td>A URI which represents how to access the volume disk data.</td></tr><tr><td><code>unit</code></td><td>out</td><td><code>unit</code></td><td>Unit</td></tr></tbody></table></div><div class="tabs-panel" id="ocaml-close"><h4>Client:</h4><h4>Server:</h4></div><div class="tabs-panel" id="python-close"><h4>Client:</h4><pre class="prettyprint lang-py">
 import xmlrpclib
 import xapi
 from storage import *
@@ -903,11 +245,7 @@ from storage import *
 if __name__ == &quot;__main__&quot;:
     c = xapi.connect()
     results = c.Datapath.close({ dbg: &quot;string&quot;, uri: &quot;string&quot; })
-    print (repr(results))
-        </pre>
-        <h4>Server</h4>
-        <pre class="prettyprint lang-py">
-        
+    print (repr(results))</pre><h4>Server:</h4><pre class="prettyprint lang-py">
 import xmlrpclib
 import xapi
 from storage import *
@@ -919,37 +257,7 @@ class Datapath_myimplementation(Datapath_skeleton):
         &quot;&quot;&quot;Xapi will call the functions here on VM start/shutdown/suspend/resume/migrate. Every function is idempotent. Every function takes a domain parameter which allows the implementation to track how many domains are currently using the volume.&quot;&quot;&quot;
         result = {}
         return result
-    # ...
-        </pre>
-      </div>
-    </div>
-  
-  
-  
-      
-    <h3 id="a-exceptions">exceptions</h3>
-    <table width="100%">
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Type</th>
-          <th>Description</th>
-        </tr>
-     </thead>
-     <tbody>
-       
-      <tr>
-        <td><pre>Unimplemented</pre></td>
-        <td><pre>string</pre></td>
-        <td>The operation has not been implemented</td>
-      </tr>
-    
-     </tbody>
-    </table>
-  
-    </div>
-    </div>
-  
+    # ...</pre></div></div></div></div>
 
     <script src="js/vendor/jquery.js"></script>
     <script src="js/vendor/foundation.min.js"></script>
