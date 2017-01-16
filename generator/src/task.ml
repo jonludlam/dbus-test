@@ -1,88 +1,91 @@
 (* Tasks API *)
-
+open Rpc
 open Idl
+open Common
 
-type exn =
-  | Unimplemented of string
-  [@@deriving rpc]
+let doc l = String.concat " " l
 
-type error_t = string [@@deriving rpc]
-type id = string [@@deriving rpc] [@@doc "Unique identifier for a task"]
-type task_list = id list [@@deriving rpc]
+type error_t = string [@@deriving rpcty]
+type id = string [@@deriving rpcty] [@@doc ["Unique identifier for a task"]]
+type task_list = id list [@@deriving rpcty]
 
 type async_result_t =
+  | UnitResult of unit
   | Volume of Control.volume
-  | Mirror of string (* Mirror.id *)
-  [@@deriving rpc]
-  
+  [@@deriving rpcty]
+
 type completion_t = {
   duration : float;
   result : async_result_t option
-} [@@deriving rpc]
+} [@@deriving rpcty]
 
 type state =
-  | Pending of float [@doc "the task is in progress, with progress info from 0..1"]
+  | Pending of float [@doc [
+      "the task is in progress, with progress info from 0..1"]]
   | Completed of completion_t
   | Failed of error_t
-  [@@deriving rpc]
+  [@@deriving rpcty]
 
 type task = {
   id : id;
   debug_info : string;
   ctime : float;
   state : state;
-} [@@deriving rpc]
+} [@@deriving rpcty]
 
 let unit = Param.mk Types.unit
-let dbg = Param.mk ~name:"dbg" ~description:"Debug context from the caller" Types.string
-    
+let dbg = Param.mk ~name:"dbg" ~description:["Debug context from the caller"]
+    Types.string
+
 module Task(R : RPC) = struct
   open R
-      
+
   let interface = describe Idl.Interface.({
       name = "Task";
-      description = "The task interface is for querying the status of asynchronous tasks. All long-running
-        operations are associated with tasks, including copying and mirroring of data.";
-      version=1 })
+      description =
+        ["The task interface is for querying the status of asynchronous ";
+         "tasks. All long-running operations are associated with tasks, ";
+         "including copying and mirroring of data."];
+      version=(1,0,0) })
 
-  let task = Param.mk id_def
-  let result = Param.mk ~name:"result" task_def
+  let task_p = Param.mk id
+  let result = Param.mk ~name:"result" task
   let stat = declare "stat"
-      "[stat task_id] returns the status of the task"
-      (task @-> returning result)
+      ["[stat task_id] returns the status of the task"]
+      (task_p @-> returning result error)
 
   let cancel = declare "cancel"
-      "[cancel task_id] performs a best-effort cancellation of an ongoing task. The effect of this should leave the system in one of two states: Either that the task has completed successfully, or that it had never been made at all. The call should return immediately and the status of the task can the be queried via the [stat] call."
-      (task @-> returning unit)
+      ["[cancel task_id] performs a best-effort cancellation of an ongoing ";
+       "task. The effect of this should leave the system in one of two ";
+       "states: Either that the task has completed successfully, or that it ";
+       "had never been made at all. The call should return immediately and ";
+       "the status of the task can the be queried via the [stat] call."]
+      (task_p @-> returning unit error)
 
   let destroy = declare "destroy"
-      "[destroy task_id] should remove all traces of the task_id. This call should fail if the task is currently in progress."
-      (task @-> returning unit)
+      ["[destroy task_id] should remove all traces of the task_id. This call ";
+       "should fail if the task is currently in progress."]
+      (task_p @-> returning unit error)
 
-  let task_list = Param.mk task_list_def
+  let task_list = Param.mk task_list
   let ls = declare "ls"
-      "[ls] should return a list of all of the tasks the plugin is aware of"
-      (unit @-> returning task_list)
+      ["[ls] should return a list of all of the tasks the plugin is aware of."]
+      (unit @-> returning task_list error)
 end
 
-module Code=Task(Codegen)
+module Code = Codegen.Gen ()
+module Code'= Task(Code)
 
 let interfaces =
-  let interface = Code.(interface
-                        |> stat
-                        |> cancel
-                        |> destroy
-                        |> ls
-                       ) in
+  let interface = Code.get_interface () in
 
   let interfaces = Codegen.Interfaces.empty
       "task"
       "The Task interface"
-      "The Task interface is required if the backend supports long-running tasks."
+      ["The Task interface is required if the backend supports long-running ";
+       "tasks."]
   in
 
   let interface = Codegen.Interface.prepend_arg interface dbg in
-  let interfaces = Codegen.Interfaces.add_interface interfaces interface in
-  let interfaces = Codegen.Interfaces.register_exn interfaces exn_def in
+  let interfaces = Codegen.Interfaces.add_interface interface interfaces in
   interfaces
-

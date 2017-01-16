@@ -13,4 +13,4 @@ Executable storage_test
   Custom:             true
   CompiledObject:     best
   Install:            false
-  BuildDepends:       cow, rpclib, ppx_deriving_rpc, xmlm, unix
+  BuildDepends:       cow, rpclib, rpclib.markdown, ppx_deriving_rpc, xmlm, unix

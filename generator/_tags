@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: 13edba30d7caf52bb2e5a5fdd8d0cc5e)
+# DO NOT EDIT (digest: 47027a82fb60e25c6af1dee99a0325ba)
 # Ignore VCS directories, you can use the same kind of rule outside
 # OASIS_START/STOP if you want to exclude directories that contains
 # useless stuff for the build process
@@ -18,11 +18,13 @@ true: annot, bin_annot
 <src/main.{native,byte}>: pkg_cow
 <src/main.{native,byte}>: pkg_ppx_deriving_rpc
 <src/main.{native,byte}>: pkg_rpclib
+<src/main.{native,byte}>: pkg_rpclib.markdown
 <src/main.{native,byte}>: pkg_unix
 <src/main.{native,byte}>: pkg_xmlm
 <src/*.ml{,i,y}>: pkg_cow
 <src/*.ml{,i,y}>: pkg_ppx_deriving_rpc
 <src/*.ml{,i,y}>: pkg_rpclib
+<src/*.ml{,i,y}>: pkg_rpclib.markdown
 <src/*.ml{,i,y}>: pkg_unix
 <src/*.ml{,i,y}>: pkg_xmlm
 <src/main.{native,byte}>: custom

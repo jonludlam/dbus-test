@@ -1,5 +1,4 @@
 S src
 B _build
 B _build/src
-PKG lwt cow cow.syntax xmlm rpclib result
-
+PKG lwt cow xmlm rpclib result ppx_deriving_rpc

@@ -1,7 +1,7 @@
 open Codegen
 open Cow.Html
 open Files
-    
+
 type page = {
   name: string;
   title: string;
@@ -135,9 +135,9 @@ let placeholder_html oc pages body =
 let page_of_api api = {
   name = api.Codegen.Interfaces.name;
   title = api.Interfaces.title;
-  path = "doc/gen/" ^ api.Interfaces.name ^ ".html";
-  filename = api.Interfaces.name ^ ".html";
-  description = api.Interfaces.description;
+  path = "doc/gen/" ^ api.Interfaces.name ^ ".md";
+  filename = api.Interfaces.name ^ ".md";
+  description = String.concat "" api.Interfaces.description;
   api = api;
 }
 
@@ -148,10 +148,7 @@ let write apis =
     (fun page ->
        with_output_file page.path
          (fun oc ->
-            print_file_to oc ("doc/static/header.html");
-            output_string oc (Cow.Html.to_string (topbar pages));
-            output_string oc (Htmlgen.to_string page.api);
-            print_file_to oc ("doc/static/footer.html")
+            output_string oc (Markdowngen.to_string page.api);
          );
     ) pages;
   with_output_file "doc/index.html"
@@ -175,4 +172,3 @@ let write apis =
       "learn.html";
       "architecture.html";
     ]
-
