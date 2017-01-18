@@ -151,42 +151,36 @@ module Volume(R: RPC) = struct
   let volume = Param.mk ~name:"volume" ~description:
       ["Properties of the volume"] volume
 
-  let interface = R.describe
-      {Idl.Interface.name = "Volume";
-       description=["Operations which operate on volumes (also known as ";
-                    "Virtual Disk Images)"];
-       version=(1,0,0)}
-
   let create = R.declare "create"
       ["[create sr name description size] creates a new volume in [sr] with ";
        "[name] and [description]. The volume will have size >= [size] i.e. it ";
        "is always permissable for an implementation to round-up the volume to ";
        "the nearest convenient block size"]
-      (sr @-> name @-> description @-> size @-> returning volume errors)
+      (dbg @-> sr @-> name @-> description @-> size @-> returning volume errors)
 
   let snapshot = R.declare "snapshot"
       ["[snapshot sr volume] creates a new volue which is a  snapshot of ";
        "[volume] in [sr]. Snapshots should never be written to; they are ";
        "intended for backup/restore only. Note the name and description are ";
        "copied but any extra metadata associated by [set] is not copied."]
-      (sr @-> key @-> returning volume errors)
+      (dbg @-> sr @-> key @-> returning volume errors)
 
   let clone = R.declare "clone"
       ["[clone sr volume] creates a new volume which is a writable clone of ";
        "[volume] in [sr]. Note the name and description are copied but any ";
        "extra metadata associated by [set] is not copied."]
-      (sr @-> key @-> returning volume errors)
+      (dbg @-> sr @-> key @-> returning volume errors)
 
   let destroy = R.declare "destroy"
       ["[destroy sr volume] removes [volume] from [sr]"]
-      (sr @-> key @-> returning unit errors)
+      (dbg @-> sr @-> key @-> returning unit errors)
 
   let new_name = Param.mk ~name:"new_name" ~description:["New name"]
       Types.string
 
   let set_name = R.declare "set_name"
       ["[set_name sr volume new_name] changes the name of [volume]"]
-      (sr @-> key @-> new_name @-> returning unit errors)
+      (dbg @-> sr @-> key @-> new_name @-> returning unit errors)
 
   let new_description = Param.mk ~name:"new_description"
       ~description:["New description"] Types.string
@@ -194,7 +188,7 @@ module Volume(R: RPC) = struct
   let set_description = R.declare "set_description"
       ["[set_description sr volume new_description] changes the description ";
        "of [volume]"]
-      (sr @-> key @-> new_description @-> returning unit errors)
+      (dbg @-> sr @-> key @-> new_description @-> returning unit errors)
 
   let k = Param.mk ~name:"k" ~description:["Key"] Types.string
   let v = Param.mk ~name:"v" ~description:["Value"] Types.string
@@ -202,25 +196,25 @@ module Volume(R: RPC) = struct
       ["[set sr volume key value] associates [key] with [value] in the ";
        "metadata of [volume] Note these keys and values are not interpreted ";
        "by the plugin; they are intended for the higher-level software only."]
-      (sr @-> key @-> k @-> v @-> returning unit errors)
+      (dbg @-> sr @-> key @-> k @-> v @-> returning unit errors)
 
   let unset = R.declare "unset"
       ["[unset sr volume key] removes [key] and any value associated with it ";
        "from the metadata of [volume] Note these keys and values are not ";
        "interpreted by the plugin; they are intended for the higher-level ";
        "software only."]
-      (sr @-> key @-> k @-> returning unit errors)
+      (dbg @-> sr @-> key @-> k @-> returning unit errors)
 
   let new_size = Param.mk ~name:"new_size" ~description:["New disk size"]
       Types.int64
   let resize = R.declare "resize"
       ["[resize sr volume new_size] enlarges [volume] to be at least ";
        "[new_size]."]
-      (sr @-> key @-> new_size @-> returning unit errors)
+      (dbg @-> sr @-> key @-> new_size @-> returning unit errors)
 
   let stat = R.declare "stat"
       ["[stat sr volume] returns metadata associated with [volume]."]
-      (sr @-> key @-> returning volume errors)
+      (dbg @-> sr @-> key @-> returning volume errors)
 
   let key2 = {key with Param.name="key2"}
   let blocklist_result = Param.mk blocklist
@@ -232,7 +226,13 @@ module Volume(R: RPC) = struct
        "non-empty in volume1. If this information is not available to the ";
        "plugin, it should return a result indicating that all blocks are in ";
        "use."]
-      (sr @-> key @-> key2 @-> returning blocklist_result errors)
+      (dbg @-> sr @-> key @-> key2 @-> returning blocklist_result errors)
+
+  let interface = R.describe
+      {Idl.Interface.name = "Volume";
+       description=["Operations which operate on volumes (also known as ";
+                    "Virtual Disk Images)"];
+       version=(1,0,0)}
 end
 
 type probe_result = {
@@ -243,11 +243,6 @@ type probe_result = {
 module Sr(R : RPC) = struct
   open R
 
-  let interface = R.describe
-      {Idl.Interface.name = "SR";
-       description=["Operations which act on Storage Repositories"];
-       version=(1,0,0)}
-
   let uri = Param.mk ~name:"uri" ~description:["The Storage Repository URI"]
       Types.string
 
@@ -256,7 +251,7 @@ module Sr(R : RPC) = struct
 
   let probe = R.declare "probe"
       ["[probe uri]: looks for existing SRs on the storage device"]
-      (uri @-> returning probe_result_p errors)
+      (dbg @-> uri @-> returning probe_result_p errors)
 
 
   let name = Param.mk ~name:"name" ~description:
@@ -274,43 +269,44 @@ module Sr(R : RPC) = struct
        ty = Dict(String, Basic String)}
   let create = R.declare "create"
       ["[create uri name description configuration]: creates a fresh SR"]
-      (uri @-> name @-> description @-> configuration @-> returning unit errors)
+      (dbg @-> uri @-> name @-> description @-> configuration
+       @-> returning unit errors)
 
   let attach = R.declare "attach"
       ["[attach uri]: attaches the SR to the local host. Once an SR is ";
        "attached then volumes may be manipulated."]
-      (uri @-> returning sr errors)
+      (dbg @-> uri @-> returning sr errors)
 
   let detach = R.declare "detach"
       ["[detach sr]: detaches the SR, clearing up any associated resources. ";
        "Once the SR is detached then volumes may not be manipulated."]
-      (sr @-> returning unit errors)
+      (dbg @-> sr @-> returning unit errors)
 
   let destroy = R.declare "destroy"
       ["[destroy sr]: destroys the [sr] and deletes any volumes associated ";
        "with it. Note that an SR must be attached to be destroyed; otherwise ";
        "Sr_not_attached is thrown."]
-      (sr @-> returning unit errors)
+      (dbg @-> sr @-> returning unit errors)
 
   let stat_result = Param.mk ~name:"sr" ~description:["SR metadata"] sr_stat
   let stat = R.declare "stat"
       ["[stat sr] returns summary metadata associated with [sr]. Note this ";
        "call does not return details of sub-volumes, see SR.ls."]
-      (sr @-> returning stat_result errors)
+      (dbg @-> sr @-> returning stat_result errors)
 
   let new_name = Param.mk ~name:"new_name"
       ~description:["The new name of the SR"]
       Types.string
   let set_name = R.declare "set_name"
       ["[set_name sr new_name] changes the name of [sr]"]
-      (sr @-> new_name @-> returning unit errors)
+      (dbg @-> sr @-> new_name @-> returning unit errors)
 
   let new_description = Param.mk ~name:"new_description"
       ~description:["The new description for the SR"]
       Types.string
   let set_description = R.declare "set_description"
       ["[set_description sr new_description] changes the description of [sr]"]
-      (sr @-> new_description @-> returning unit errors)
+      (dbg @-> sr @-> new_description @-> returning unit errors)
 
   let volumes = Param.mk ~name:"volumes"
       Types.{name="volumes";
@@ -319,31 +315,27 @@ module Sr(R : RPC) = struct
 
   let ls = R.declare "ls"
       ["[ls sr] returns a list of volumes contained within an attached SR."]
-      (sr @-> returning volumes errors)
+      (dbg @-> sr @-> returning volumes errors)
+
+  let interface = R.describe
+      {Idl.Interface.name = "SR";
+       description=["Operations which act on Storage Repositories"];
+       version=(1,0,0)}
+
 end
 
-module VolumeCode = Codegen.Gen ()
-module V = Volume(VolumeCode)
-module SrCode = Codegen.Gen ()
-module S=Sr(SrCode)
+module V = Volume(Codegen.Gen ())
+module S = Sr(Codegen.Gen ())
 
-let interfaces =
-  let interfaces = Codegen.Interfaces.empty
-      "volume"
-      "The Volume plugin interface"
-      ["The xapi toolstack delegates all storage control-plane functions to ";
-       "\"Volume plugins\".These plugins allow the toolstack to ";
-       "create/destroy/snapshot/clone volumes which are organised into groups ";
-       "called Storage Repositories (SR). Volumes have a set of URIs which ";
-       "can be used by the \"Datapath plugins\" to connect the disk data to ";
-       "VMs."]
-  in
+let interfaces = Codegen.Interfaces.create
+    ~name:"volume"
+    ~title:"The Volume plugin interface"
+    ~description:[
+      "The xapi toolstack delegates all storage control-plane functions to ";
+      "\"Volume plugins\".These plugins allow the toolstack to ";
+      "create/destroy/snapshot/clone volumes which are organised into groups ";
+      "called Storage Repositories (SR). Volumes have a set of URIs which ";
+      "can be used by the \"Datapath plugins\" to connect the disk data to ";
+      "VMs."]
+    ~interfaces:[S.interface; V.interface]
 
-  let vinterface = Codegen.Interface.prepend_arg (VolumeCode.get_interface ()) dbg in
-
-  let sinterface = Codegen.Interface.prepend_arg (SrCode.get_interface ()) dbg in
-
-  let interfaces = Codegen.Interfaces.add_interface sinterface interfaces in
-  let interfaces = Codegen.Interfaces.add_interface vinterface interfaces in
-
-  interfaces

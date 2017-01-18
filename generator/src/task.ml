@@ -40,19 +40,11 @@ let dbg = Param.mk ~name:"dbg" ~description:["Debug context from the caller"]
 module Task(R : RPC) = struct
   open R
 
-  let interface = describe Idl.Interface.({
-      name = "Task";
-      description =
-        ["The task interface is for querying the status of asynchronous ";
-         "tasks. All long-running operations are associated with tasks, ";
-         "including copying and mirroring of data."];
-      version=(1,0,0) })
-
   let task_p = Param.mk id
   let result = Param.mk ~name:"result" task
   let stat = declare "stat"
       ["[stat task_id] returns the status of the task"]
-      (task_p @-> returning result error)
+      (dbg @-> task_p @-> returning result error)
 
   let cancel = declare "cancel"
       ["[cancel task_id] performs a best-effort cancellation of an ongoing ";
@@ -60,32 +52,33 @@ module Task(R : RPC) = struct
        "states: Either that the task has completed successfully, or that it ";
        "had never been made at all. The call should return immediately and ";
        "the status of the task can the be queried via the [stat] call."]
-      (task_p @-> returning unit error)
+      (dbg @-> task_p @-> returning unit error)
 
   let destroy = declare "destroy"
       ["[destroy task_id] should remove all traces of the task_id. This call ";
        "should fail if the task is currently in progress."]
-      (task_p @-> returning unit error)
+      (dbg @-> task_p @-> returning unit error)
 
   let task_list = Param.mk task_list
   let ls = declare "ls"
       ["[ls] should return a list of all of the tasks the plugin is aware of."]
-      (unit @-> returning task_list error)
+      (dbg @-> unit @-> returning task_list error)
+
+  let interface = describe Idl.Interface.({
+      name = "Task";
+      description =
+        ["The task interface is for querying the status of asynchronous ";
+         "tasks. All long-running operations are associated with tasks, ";
+         "including copying and mirroring of data."];
+      version=(1,0,0) })
 end
 
-module Code = Codegen.Gen ()
-module Code'= Task(Code)
+module T = Task(Codegen.Gen ())
 
-let interfaces =
-  let interface = Code.get_interface () in
-
-  let interfaces = Codegen.Interfaces.empty
-      "task"
-      "The Task interface"
-      ["The Task interface is required if the backend supports long-running ";
-       "tasks."]
-  in
-
-  let interface = Codegen.Interface.prepend_arg interface dbg in
-  let interfaces = Codegen.Interfaces.add_interface interface interfaces in
-  interfaces
+let interfaces = Codegen.Interfaces.create
+    ~name:"task"
+    ~title:"The Task interface"
+    ~description:[
+      "The Task interface is required if the backend supports long-running ";
+      "tasks."]
+    ~interfaces:[T.interface]

@@ -44,14 +44,6 @@ let dbg = Param.mk ~name:"dbg" ~description:["Debug context from the caller"]
 module Plugin(R : RPC) = struct
   open R
 
-  let interface = R.describe
-      {Idl.Interface.name = "Plugin";
-       description=
-         ["Discover properties of this implementation. Every implementation";
-          "must support the query interface or it will not be recognised as";
-          "a storage plugin by xapi."];
-       version=(1,0,0)}
-
   let unit = Param.mk Types.unit
 
   let query_result = Param.mk query_result
@@ -60,13 +52,13 @@ module Plugin(R : RPC) = struct
       ["Query this implementation and return its properties. This is ";
        "called by xapi to determine whether it is compatible with xapi ";
        "and to discover the supported features."]
-      (unit @-> returning query_result error)
+      (dbg @-> unit @-> returning query_result error)
 
   let srs = Param.mk ~name:"srs" ~description:["The attached SRs"] srs
 
   let ls = declare "ls"
       ["[ls dbg]: returns a list of attached SRs"]
-      (unit @-> returning srs error)
+      (dbg @-> unit @-> returning srs error)
 
   let diagnostics_p = Param.mk ~name:"diagnostics" ~description:
       ["A string containing loggable human-readable diagnostics information"]
@@ -78,24 +70,24 @@ module Plugin(R : RPC) = struct
        "be useful to diagnose problems. Note this data should not ";
        "include personally-identifiable data as it is intended to be ";
        " automatically included in bug reports."]
-      (unit @-> returning diagnostics_p error)
+      (dbg @-> unit @-> returning diagnostics_p error)
 
+  let interface = R.describe
+      {Idl.Interface.name = "Plugin";
+       description=
+         ["Discover properties of this implementation. Every implementation";
+          "must support the query interface or it will not be recognised as";
+          "a storage plugin by xapi."];
+       version=(1,0,0)}
 end
 
-module Code = Codegen.Gen ()
-module Code' = Plugin(Code)
+module P = Plugin(Codegen.Gen ())
 
-let interfaces =
-  let interface = Code.get_interface () in
-  let interfaces = Codegen.Interfaces.empty
-      "plugin"
-      "The Datapath plugin interface"
-      ["The Datapath plugin takes a URI which points to virtual disk data ";
-       "and chooses a Xen datapath implementation: driver domain, blkback ";
-       "implementation and caching strategy."]
-  in
-
-  let interface = Codegen.Interface.prepend_arg interface dbg in
-  let interfaces = Codegen.Interfaces.add_interface interface interfaces in
-
-  interfaces
+let interfaces = Codegen.Interfaces.create
+      ~name:"plugin"
+      ~title:"The Datapath plugin interface"
+      ~description:[
+        "The Datapath plugin takes a URI which points to virtual disk data ";
+        "and chooses a Xen datapath implementation: driver domain, blkback ";
+        "implementation and caching strategy."]
+      ~interfaces:[P.interface]

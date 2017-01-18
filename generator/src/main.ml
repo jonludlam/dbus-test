@@ -19,6 +19,7 @@ let _ =
     Control.interfaces;
     Data.interfaces;
     Task.interfaces;
+    Example.interfaces;
   ] in
 
   if !generate_html
@@ -31,14 +32,4 @@ let _ =
             let p = Pythongen.of_interfaces api |> Pythongen.string_of_ts in
             output_string oc p
          )
-    ) apis;
-  
-(*  List.iter
-    (fun api ->
-       with_output_file (Printf.sprintf "ocaml/lib/%s.ml" api.Interfaces.name)
-         (fun oc ->
-            let idents, api = resolve_refs_in_api api in
-            Ocaml.write_examples (Printf.sprintf "ocaml/examples/%s" api.Interfaces.name) idents api;
-            output_string oc (Ocaml.of_interfaces idents api |> Ocaml.string_of_ts)
-         )
-    ) apis*)
+    ) apis

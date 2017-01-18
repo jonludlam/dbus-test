@@ -60,16 +60,6 @@ open Idl
 module Datapath(R: RPC) = struct
   open R
 
-  let interface = R.describe Idl.Interface.{
-      name = "Datapath";
-      description = [
-          "Xapi will call the functions here on VM start / shutdown /";
-          "suspend / resume / migrate. Every function is idempotent. Every";
-          "function takes a domain parameter which allows the implementation";
-          "to track how many domains are currently using the volume." ];
-      version=(1,0,0);
-    }
-
   let open_ =
     declare "open" [
       "[open uri persistent] is called before a disk is attached to a VM.";
@@ -77,7 +67,7 @@ module Datapath(R: RPC) = struct
       "to the disk. If persistent is false then the implementation should";
       "configure a temporary location for writes so they can be thrown away";
       "on [close]."]
-      (uri_p @-> persistent @-> returning unit error)
+      (dbg @-> uri_p @-> persistent @-> returning unit error)
 
   let attach =
     declare "attach" [
@@ -88,7 +78,7 @@ module Datapath(R: RPC) = struct
       "attached to multiple hosts for example over a migrate. If an";
       "implementation needs to perform an explicit handover, then it should";
       "implement [activate] and [deactivate]. This function is idempotent."]
-      (uri_p @-> domain @-> returning backend error)
+      (dbg @-> uri_p @-> domain @-> returning backend error)
 
   let activate =
     declare "activate" [
@@ -97,7 +87,7 @@ module Datapath(R: RPC) = struct
       "perform an explicit volume handover to do it. This function is called";
       "in the migration downtime window so delays here will be noticeable to";
       "users and should be minimised. This function is idempotent."]
-      (uri_p @-> domain @-> returning unit error)
+      (dbg @-> uri_p @-> domain @-> returning unit error)
 
   let deactivate =
     declare "deactivate" [
@@ -106,7 +96,7 @@ module Datapath(R: RPC) = struct
       "needs to perform an explicit volume handover to do it. This function is";
       "called in the migration downtime window so delays here will be";
       "noticeable to users and should be minimised. This function is idempotent."]
-      (uri_p @-> domain @-> returning unit error)
+      (dbg @-> uri_p @-> domain @-> returning unit error)
 
   let detach =
     declare "detach" [
@@ -118,28 +108,29 @@ module Datapath(R: RPC) = struct
       "unable to perform some cleanup right away then it should queue the";
       "action internally. Any error result represents a bug in the";
       "implementation."]
-      (uri_p @-> domain @-> returning unit error)
+      (dbg @-> uri_p @-> domain @-> returning unit error)
 
   let close =
     declare "close" [
       "[close uri] is called after a disk is detached and a VM shutdown. This";
       "is an opportunity to throw away writes if the disk is not persistent."]
-      (uri_p @-> returning unit error)
+      (dbg @-> uri_p @-> returning unit error)
+
+  let interface = R.describe Idl.Interface.{
+      name = "Datapath";
+      description = [
+        "Xapi will call the functions here on VM start / shutdown /";
+        "suspend / resume / migrate. Every function is idempotent. Every";
+        "function takes a domain parameter which allows the implementation";
+        "to track how many domains are currently using the volume." ];
+      version=(1,0,0);
+    }
 
 end
 
 
 module Data (R : RPC) = struct
   open R
-
-  let interface = describe Idl.Interface.{
-      name = "Data";
-      description = [
-        "This interface is used for long-running data operations such as";
-        "copying the contents of volumes or mirroring volumes to remote";
-        "destinations"];
-      version = (1,0,0)
-    }
 
   type operation =
     | Copy of uri * uri
@@ -177,59 +168,54 @@ module Data (R : RPC) = struct
        "to a remote URI. This may be called as part of a Volume Mirroring ";
        "operation, and hence may need to cooperate with whatever process is ";
        "currently mirroring writes to ensure data integrity is maintained"]
-      (uri_p @-> domain @-> remote @-> blocklist @-> returning operation error)
+      (dbg @-> uri_p @-> domain @-> remote @-> blocklist @-> returning operation error)
 
   let mirror = declare "mirror"
       ["[mirror uri domain remote] starts mirroring new writes to the volume ";
        "to a remote URI (usually NBD). This is called as part of a volume ";
        "mirroring process"]
-      (uri_p @-> domain @-> remote @-> returning operation error)
+      (dbg @-> uri_p @-> domain @-> remote @-> returning operation error)
 
   let status = Param.mk status
   let stat = declare "stat"
       ["[stat operation] returns the current status of [operation]. For a ";
        "copy operation, this will contain progress information."]
-      (operation @-> returning status error)
+      (dbg @-> operation @-> returning status error)
 
   let cancel = declare "cancel"
       ["[cancel operation] cancels a long-running operation. Note that the ";
        "call may return before the operation has finished."]
-      (operation @-> returning unit error)
+      (dbg @-> operation @-> returning unit error)
 
   let destroy = declare "destroy"
       ["[destroy operation] destroys the information about a long-running ";
        "operation. This should fail when run against an operation that is ";
        "still in progress."]
-      (operation @-> returning unit error)
+      (dbg @-> operation @-> returning unit error)
 
   let operations = Param.mk operations
   let ls = declare "ls"
       ["[ls] returns a list of all current operations"]
-      (unit @-> returning operations error)
+      (dbg @-> unit @-> returning operations error)
+
+  let interface = describe Idl.Interface.{
+      name = "Data";
+      description = [
+        "This interface is used for long-running data operations such as";
+        "copying the contents of volumes or mirroring volumes to remote";
+        "destinations"];
+      version = (1,0,0)
+    }
+
 end
 
-module Code = Codegen.Gen ()
-module Code' = Datapath(Code)
-module D = Codegen.Gen ()
-module D' = Data(D)
+module DPCode = Datapath(Codegen.Gen ())
+module DCode = Data(Codegen.Gen())
 
-let interfaces =
-  let interface = Code.get_interface () in
-  let dinterface = D.get_interface () in
-
-  let interfaces = Codegen.Interfaces.empty
-      "datapath"
-      "The Plugin interface"
-      ["The xapi toolstack expects all plugins to support a basic query ";
-       "interface."]
-  in
-
-  let interface = Codegen.Interface.prepend_arg interface dbg in
-  let dinterface = Codegen.Interface.prepend_arg dinterface dbg in
-  let interfaces = Codegen.Interfaces.add_interface interface interfaces in
-  let interfaces = Codegen.Interfaces.add_interface dinterface interfaces in
-  interfaces
-
-(*  let p = Pythongen.of_interfaces interfaces |> Pythongen.string_of_ts in
-
-    Printf.printf "%s" p*)
+let interfaces = Codegen.Interfaces.create
+    ~name:"datapath"
+    ~title:"The Plugin interface"
+    ~description:[
+      "The xapi toolstack expects all plugins to support a basic query ";
+      "interface."]
+    ~interfaces:[DPCode.interface; DCode.interface]
