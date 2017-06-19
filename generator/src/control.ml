@@ -228,8 +228,9 @@ module Volume(R: RPC) = struct
        "use."]
       (dbg @-> sr @-> key @-> key2 @-> returning blocklist_result errors)
 
-  let interface = R.describe
+  let implementation = R.implement
       {Idl.Interface.name = "Volume";
+       namespace=None;
        description=["Operations which operate on volumes (also known as ";
                     "Virtual Disk Images)"];
        version=(1,0,0)}
@@ -317,8 +318,9 @@ module Sr(R : RPC) = struct
       ["[ls sr] returns a list of volumes contained within an attached SR."]
       (dbg @-> sr @-> returning volumes errors)
 
-  let interface = R.describe
+  let implementation = R.implement
       {Idl.Interface.name = "SR";
+       namespace = Some "SR";
        description=["Operations which act on Storage Repositories"];
        version=(1,0,0)}
 
@@ -337,5 +339,5 @@ let interfaces = Codegen.Interfaces.create
       "called Storage Repositories (SR). Volumes have a set of URIs which ";
       "can be used by the \"Datapath plugins\" to connect the disk data to ";
       "VMs."]
-    ~interfaces:[S.interface; V.interface]
+    ~interfaces:[S.implementation (); V.implementation ()]
 

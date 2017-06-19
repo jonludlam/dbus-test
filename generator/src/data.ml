@@ -116,8 +116,9 @@ module Datapath(R: RPC) = struct
       "is an opportunity to throw away writes if the disk is not persistent."]
       (dbg @-> uri_p @-> returning unit error)
 
-  let interface = R.describe Idl.Interface.{
+  let implementation = R.implement Idl.Interface.{
       name = "Datapath";
+      namespace = Some "Datapath";
       description = [
         "Xapi will call the functions here on VM start / shutdown /";
         "suspend / resume / migrate. Every function is idempotent. Every";
@@ -198,8 +199,9 @@ module Data (R : RPC) = struct
       ["[ls] returns a list of all current operations"]
       (dbg @-> unit @-> returning operations error)
 
-  let interface = describe Idl.Interface.{
+  let implementation = implement Idl.Interface.{
       name = "Data";
+      namespace = Some "Data";
       description = [
         "This interface is used for long-running data operations such as";
         "copying the contents of volumes or mirroring volumes to remote";
@@ -218,4 +220,4 @@ let interfaces = Codegen.Interfaces.create
     ~description:[
       "The xapi toolstack expects all plugins to support a basic query ";
       "interface."]
-    ~interfaces:[DPCode.interface; DCode.interface]
+    ~interfaces:[DPCode.implementation (); DCode.implementation ()]

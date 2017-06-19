@@ -184,9 +184,10 @@ module NewInterface (R : RPC) = struct
   (* We must write a little documentation for the interface, with
      name, description and version. This _MUST_ be after all of 
      the RPC declarations. *)
-  let interface = describe
+  let implementation = implement
       Idl.Interface.{
         name = "NewInterface";
+        namespace = Some "NewInterface";
         description = ["Here we describe the new interface."];
         version=(1,0,0)}
 end
@@ -204,4 +205,4 @@ let interfaces = Codegen.Interfaces.create
     ~description:[
       "This code serves as an example for how to add a new ";
       "set of interfaces to the xapi-storage code"]
-    ~interfaces:[Code.interface]
+    ~interfaces:[Code.implementation ()]

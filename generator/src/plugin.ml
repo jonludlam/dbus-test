@@ -72,8 +72,9 @@ module Plugin(R : RPC) = struct
        " automatically included in bug reports."]
       (dbg @-> unit @-> returning diagnostics_p error)
 
-  let interface = R.describe
+  let implementation = R.implement
       {Idl.Interface.name = "Plugin";
+       namespace = Some "Plugin";
        description=
          ["Discover properties of this implementation. Every implementation";
           "must support the query interface or it will not be recognised as";
@@ -90,4 +91,4 @@ let interfaces = Codegen.Interfaces.create
         "The Datapath plugin takes a URI which points to virtual disk data ";
         "and chooses a Xen datapath implementation: driver domain, blkback ";
         "implementation and caching strategy."]
-      ~interfaces:[P.interface]
+      ~interfaces:[P.implementation ()]

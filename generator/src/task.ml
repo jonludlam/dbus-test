@@ -64,8 +64,9 @@ module Task(R : RPC) = struct
       ["[ls] should return a list of all of the tasks the plugin is aware of."]
       (dbg @-> unit @-> returning task_list error)
 
-  let interface = describe Idl.Interface.({
+  let implementation = implement Idl.Interface.({
       name = "Task";
+      namespace = Some "Task";
       description =
         ["The task interface is for querying the status of asynchronous ";
          "tasks. All long-running operations are associated with tasks, ";
@@ -81,4 +82,4 @@ let interfaces = Codegen.Interfaces.create
     ~description:[
       "The Task interface is required if the backend supports long-running ";
       "tasks."]
-    ~interfaces:[T.interface]
+    ~interfaces:[T.implementation ()]
